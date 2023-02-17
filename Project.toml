@@ -1,0 +1,4 @@
+name = "neuro"
+uuid = "26a58318-5877-4940-9ce5-8258779325eb"
+authors = ["Luzie Helfmann <20030747+LuzieH@users.noreply.github.com>"]
+version = "0.1.0"
