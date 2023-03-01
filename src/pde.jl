@@ -5,6 +5,9 @@ using Distances
 using LaTeXStrings
 
 
+### TODO use component arrays otherwise get error when reaction happens
+## todo set seed 
+
 function second_derivative(Nx, dx)
     M = Tridiagonal(ones(Nx-1), fill(-2., Nx), ones(Nx-1))
     # boundary conditions change in time to ensure flux balance, they are added when solving pde
@@ -25,21 +28,28 @@ function centered_difference(Nx, dx)
     return C
 end
 
+function ball(radius, center, X)
+    Y = X'
+    Nx = size(X,1)
+    indices = findall([norm([X[i,j] Y[i,j]] - center) for i in 1:Nx, j in 1:Nx].<=radius)
+    return indices
+end
+
 #2D gaussian that integrates to 1 and centered at center
-gaussian(x, center; sigma=0.1) = 1/(2*pi*sigma^2)* exp(-1/(2*sigma^2)*norm(x-center)^2)
+gaussian(x, center; sigma=0.3) = 1/(2*pi*sigma^2)* exp(-1/(2*sigma^2)*norm(x-center)^2)
 
 function gaussianinit((p,q))
     (; Nx , dV, gridpoints) = p
     (; xv) = q
 
     # distribution of calcium ions
-    c0 = zeros(Nx, Ny)
+    c0 = zeros(Nx, Nx)
     center = [-0.5 -0.5]
-    c0 += reshape([gaussian(gridpoints[j,:], center) for j in 1:Nx^2], Nx, Nx)
+    c0 += reshape([gaussian(gridpoints[j,:], center') for j in 1:Nx^2], Nx, Nx)
     c0 = c0/(sum(c0)*dV)
     
     # discrete vesicle dynamics, 0: no ion attached, 1: ion attached
-    v0 = 0
+    v0 = [0.]
     # vesicle position
     x0 = xv
     return ArrayPartition(c0, v0, x0)
@@ -47,30 +57,23 @@ end
 
 
 function constructinitial((p,q))
-    X0 = gaussianinit((p,q))
-    return X0
+    u0 = gaussianinit((p,q))
+    return u0
 end
 
 
-function f(dX, X,(p,q),t)
+function f(du, u,(p,q),t)
     yield()
-    (;  N, gplus,gminus, r, xv, sigma) = q
-    (; gridpoints, dx, dV, X, Nx, domain, C,  M) = p
-    
+    (; sigma) = q
+    (; dx, Nx,  M) = p
     D = sigma^2 * 0.5
-    c, v, x= X.x
-    dc, dv, dx = dX.x
+    c, v, x=  u.x
+    dc, dv, dx = du.x
 
-    dif  = zeros(Nx, Ny)
+    dif = zeros(Nx, Nx)
     a_AB_BAT!(dif, D, M, c)
 
-    #balance fluxes at boundary (part of boundary conditions)
-#=     dif[1,:]+= -D/dx * (cforce[1,:,1])
-    dif[end,:]+= D/dx * (cforce[end,:,1])
-    dif[:,1]+= -D/dy * (cforce[:,1,2])
-    dif[:,end]+= D/dy * (cforce[:,end,2]) =#
-
-    dc .=  dif 
+    dc .= dif 
     dx .= 0
 
 end
@@ -82,49 +85,69 @@ function a_AB_BAT!(Y, a, A, B)
     mul!(Y, B, A', a, a)
 end
 
-function ratebind(X,(p,q),t) 
-    c, v, x= X.x
-    (;  N, gplus,gminus, r, xv, sigma) = q
-    (; gridpoints, dx, dV, X, Nx, domain, C,  M) = p
-
-    return gplus*(1-v)*c ##correctly adapt, replace c by integral of c over ball
+function ratebind(u,(p,q),t) 
+    c, v, x= u.x
+    (; gplus, r, xv) = q
+    (; dV, X) = p
+    indices = ball(r, xv, X)
+    return gplus*(1-v[1])*sum(c[indices])*dV
 end
 
-function rateunbind(X,(p,q),t)
-    c, v, x= X.x
-    (; gminus) = q
-
-    return gminus*v 
-end
 
 
 function affectbind!(integrator)
-    integrator.u[1] = integrator.u[1] / 2
+    p,q = integrator.p
+    (; r, xv) = q
+    (; dV, X) = p
+    indices = ball(r, xv, X)
+    U= integrator.u
+    c, v, x=  U.x
+    c[indices] .-=1/(n*dV*size(indices,1))
+    v .= 1.
     nothing
+end
+
+function rateunbind(u,(p,q),t)
+    c, v, x= u.x
+    (; gminus) = q
+
+    return gminus*v[1]
 end
 
 function affectunbind!(integrator)
-    integrator.u[1] = integrator.u[1] / 2
+    p,q = integrator.p
+    (;  r, xv) = q
+    (; dV, X) = p
+    indices = ball(r, xv, X)
+    U = integrator.u
+    c, v, x=  U.x
+    c[indices] .+=1/(n*dV*size(indices,1))
+    v .= 0.
     nothing
 end
 
-function PDEsolve(tmax=0.1; alg=nothing, init="4inf", p = PDEconstruct(), q= parameters())
+function PDEsolve(tmax=0.1; alg=Tsit5(), p = PDEconstruct(), q= parameters())
 
-    X0= constructinitial((p,q))
-    
+    u0= constructinitial((p,q))
     # Solve the ODE
-    prob = ODEProblem(f,X0,(0.0,tmax),(p,q))
+    prob = ODEProblem(f,u0,(0.0,tmax),(p,q))
     jump = VariableRateJump(ratebind, affectbind!)
     jump2 = VariableRateJump(rateunbind, affectunbind!)
     jump_prob = JumpProblem(prob, Direct(), jump, jump2)
-    @time sol = DifferentialEquations.solve(jump_prob, alg,  save_start=true)
-
+    @time sol = DifferentialEquations.solve(jump_prob, alg,save_start=true)
     return sol, (p,q)
 end
 
-function sol2uyz(sol, t)
-    u = sol(t).x[1]
-    z = sol(t).x[2]
-    y = sol(t).x[3]
-    return u,z,y
+function sol2cvx(sol, t)
+    solsize = size(sol(t),1)
+    c = reshape(sol(t)[1:solsize-5], isqrt(solsize-5), :)
+    v = sol(t)[solsize-4]
+    x = sol(t)[solsize-3:solsize-2]
+    return c,v,x
+end
+
+function PDEsolveplot(tmax=0.1; alg=Tsit5(), p = PDEconstruct(), q= parameters())
+    sol, (p,q) = PDEsolve(tmax; alg=alg, p = p, q= q)
+    PDEgifsingle(sol,(p,q))
+    return sol, (p,q)
 end
