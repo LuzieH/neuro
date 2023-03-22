@@ -1,21 +1,18 @@
 using Plots
 pyplot()
 cmap =reverse(cgrad(:gist_earth)) 
-markercolors_vesicle = [:seagreen :firebrick ]
+markercolors_vesicle = :binary
 
-function PDEplotsingle(c,v,x,(p,q),t; clim=(0,15), title = string("t=", string(round(t, digits=2))))
+function PDEplotsingle(c,w,x,(p,q),t; clim=(0,15), title = string("t=", string(round(t, digits=2))))
     (; domain, dx) = p
-
 
     x_arr = domain[1,1]:dx:domain[1,2]
     y_arr = domain[2,1]:dx:domain[2,2]
 
-
-    subp = heatmap(x_arr,y_arr, c, title = title, c=cmap, clim=clim, legend=false)
-
+    subp = heatmap(x_arr,y_arr, c, title = title, c=cmap, clim=clim)
+    
     # plot vesicle
-    bound = v[1]
-    scatter!(subp, [x[1]],[x[2]],markercolor = markercolors_vesicle[round(Int,bound+1)],markersize=10)  
+    scatter!(subp, [x[1]],[x[2]],markerstrokecolor=:white, markersize=10,c=:black,legend=false)  
     return subp
 end
 
@@ -25,8 +22,8 @@ function PDEgifsingle(sols::Vector, Ps::Vector, dt=0.1; save=true, name = "")
     anim = Animation()
     for (sol, P) in zip(sols, Ps)
         for t in 0:dt:sol.t[end]
-            c,v,x = sol2cvx(sol, t)
-            plt = PDEplotsingle(c,v,x,P,t+T)
+            c,w,x = sol2cwx(sol, t)
+            plt = PDEplotsingle(c,w,x,P,t+T)
             frame(anim, plt)
         end
         T += sol.t[end]
@@ -34,4 +31,60 @@ function PDEgifsingle(sols::Vector, Ps::Vector, dt=0.1; save=true, name = "")
     if save==true
         Plots.gif(anim, string("src/img/pde",name,".gif"), fps = 10)
     end
+end
+
+function particleplotsingle(y, x, w,(p,q),t; binnumber = 10, clim=(0,10),title = string("t=", string(round(t, digits=2))))
+    (; domain) = p
+
+    hist,xrange,yrange = particlehistogram(y,domain,binnumber)
+    dV= (xrange[2]-xrange[1])* (yrange[2]-yrange[1])
+    hist=1/(N*dV)*hist
+    subp = heatmap(xrange, yrange,hist', title = title, c=cmap, clim=clim)
+    
+    # plot vesicle
+    scatter!(subp, [x[1]],[x[2]],markerstrokecolor=:white, markersize=10,c=:black,legend=false)  
+    return subp
+end
+
+function particlegifsingle(ys, xs, ws, (p,q); dN=10, save=true, name = "")
+    (; dt) = p
+    anim = Animation()
+    for n in 1:dN:size(ws,1)
+            y = ys[n]
+            x = xs[n]
+            w = ws[n]
+
+            plt = particleplotsingle(y, x, w,(p,q),n*dt)
+            frame(anim, plt)
+    end
+
+    if save==true
+        Plots.gif(anim, string("src/img/particle",name,".gif"), fps = 10)
+    end
+end
+
+function particleoccupation(ws,(p,q); save=true, name = "")
+    (; dt) = p
+    subp = plot(range(1,size(ws,1))*dt,ws,ylim=(0,1.1),label="occupation")
+
+    if save==true
+        savefig(string("src/img/particlemodel_occupation_",name,".png"))
+    end
+end
+
+function PDEoccupation(sol; dt=0.1, save=true, name = "")
+    times = []
+    ws=[]
+    for t in 0:dt:sol.t[end]
+        c,w,x = sol2cwx(sol, t)
+        times=push!(times,t)
+        ws=push!(ws,w[1])
+    end
+
+    subp = plot(times,ws,ylim=(0,1.1),label="occupation")
+
+    if save==true
+        savefig(string("src/img/PDE_occupation_",name,".png"))
+    end
+    
 end
