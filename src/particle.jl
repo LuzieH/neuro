@@ -14,16 +14,16 @@ function particleuniforminit((p,q))
 end
 
 
-function particlesolve(NT=200;  p = particleconstruct(), q= parameters(),chosenseed=0)
+function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1)
     Random.seed!(chosenseed)
     (; dt, domain) = p
     (; N, sigma, eps, a, fplus, fminus, gplus, gminus) = q
     y,s,x = particleuniforminit((p,q))
 
-    ys=[y]
-    ss=[s]
-    xs=[x]
-    ws=[sum(s)/(a*N)]
+    ys=[copy(y)]
+    ss=[copy(s)]
+    xs=[copy(x)]
+    ws=[deepcopy(sum(s)/(a*N))]
 
     for k in 2:NT+1
         v = sum(s)
@@ -47,9 +47,8 @@ function particlesolve(NT=200;  p = particleconstruct(), q= parameters(),chosens
             if s[i]==0 && norm(yold[i,:]-x')<=eps && r<1-exp(-gplus*fplus(v/(a*N))*dt)
                 s[i]=1
                 v+=1 
-            end
             # check unbinding
-            if s[i]==1 && r<1-exp(-gminus*fminus(v/(a*N))*dt)
+            elseif s[i]==1 && r<1-exp(-gminus*fminus(v/(a*N))*dt)
                 s[i]=0
                 v-=1 
                 # place ion uniformly in ball of radius eps around x
@@ -59,20 +58,17 @@ function particlesolve(NT=200;  p = particleconstruct(), q= parameters(),chosens
                 y[i,:] = x' + radius* [cos(theta) sin(theta)]'
             end
         end
-
         yold = y
-        w = sum(s)/(a*N)
-
         ys = push!(ys,copy(y))
         ss = push!(ss,copy(s))
         xs = push!(xs,copy(x))
-        ws = push!(ws,copy(w))
+        ws = push!(ws,deepcopy(sum(s)/(a*N)))
     end
 
     return ys, ss, xs, ws
 end 
 
-function particlesolveplot(NT=200; alg=Tsit5(), p = particleconstruct(), q= parameters())
+function particlesolveplot(NT=100; alg=Tsit5(), p = particleconstruct(), q= parameters())
     ys, ss, xs, ws  =particlesolve(NT, p=p, q=q)
     particlegifsingle(ys, xs, ws, (p,q),dN=1)
     particleoccupation(ws,(p,q))
@@ -103,7 +99,7 @@ function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 
         q= parameters(N=N)
         ws_average=Any[]
         for n in 1:Nsim
-            ys, ss, xs, ws  =particlesolve(NT, p=p2, q=q)
+            ys, ss, xs, ws  =particlesolve(NT, p=p2, q=q,chosenseed=n)
             if n==1
                 ws_average = 1/Nsim* ws
             elseif n>1
@@ -121,7 +117,7 @@ function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 
     sol, (p,q) = PDEsolve(NT*dt; alg=alg, p = p1, q= q)
     times = []
     ws_pde=Any[]
-    for t in 0:dt:sol.t[end]
+    for t in sol.t
         c,w,x = sol2cwx(sol, t)
         times=push!(times,t)
         ws_pde=push!(ws_pde,w[1])

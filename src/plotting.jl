@@ -65,17 +65,17 @@ end
 
 function particleoccupation(ws,(p,q); save=true, name = "")
     (; dt) = p
-    subp = plot(range(1,size(ws,1))*dt,ws,ylim=(0,1.1),label="occupation")
+    subp = plot(range(0,size(ws,1)-1)*dt,ws,ylim=(0,1.1),label="occupation")
 
     if save==true
         savefig(string("src/img/particlemodel_occupation_",name,".png"))
     end
 end
 
-function PDEoccupation(sol; dt=0.1, save=true, name = "")
+function PDEoccupation(sol; dt=0.02, save=true, name = "")
     times = []
     ws=[]
-    for t in 0:dt:sol.t[end]
+    for t in sol.t
         c,w,x = sol2cwx(sol, t)
         times=push!(times,t)
         ws=push!(ws,w[1])
