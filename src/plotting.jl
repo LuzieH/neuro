@@ -33,10 +33,10 @@ function PDEgifsingle(sols::Vector, Ps::Vector, dt=0.1; save=true, name = "")
     end
 end
 
-function particleplotsingle(y, x, w,(p,q),t; binnumber = 10, clim=(0,10),title = string("t=", string(round(t, digits=2))))
+function particleplotsingle(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,10),title = string("t=", string(round(t, digits=2))))
     (; domain) = p
 
-    hist,xrange,yrange = particlehistogram(y,domain,binnumber)
+    hist,xrange,yrange = particlehistogram(y,s,domain,binnumber)
     dV= (xrange[2]-xrange[1])* (yrange[2]-yrange[1])
     hist=1/(N*dV)*hist
     subp = heatmap(xrange, yrange,hist', title = title, c=cmap, clim=clim)
@@ -46,7 +46,7 @@ function particleplotsingle(y, x, w,(p,q),t; binnumber = 10, clim=(0,10),title =
     return subp
 end
 
-function particlegifsingle(ys, xs, ws, (p,q); dN=10, save=true, name = "")
+function particlegifsingle(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
     (; dt) = p
     anim = Animation()
     for n in 1:dN:size(ws,1)
@@ -54,7 +54,7 @@ function particlegifsingle(ys, xs, ws, (p,q); dN=10, save=true, name = "")
             x = xs[n]
             w = ws[n]
 
-            plt = particleplotsingle(y, x, w,(p,q),n*dt)
+            plt = particleplotsingle(y,s, x, w,(p,q),n*dt)
             frame(anim, plt)
     end
 

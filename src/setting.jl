@@ -2,7 +2,7 @@ function parameters(;
     N = 100, # nbr of calcium ions
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
-    eps = 0.2, # radius of interaction ball around vesicle
+    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
     sigma = 1, # noise strength
     a = 1/20 # defines vesicle capacity = a*N
     )
@@ -24,7 +24,7 @@ end
 
 function PDEconstruct(;
     # Define the constants for the PDE discretization
-    dx = 0.02, # dx = dy
+    dx = 0.01, # dx = dy
     domain = [0 1; 0 1] #only allow square domains
     )
     Nx = Int(round((domain[1,2]-domain[1,1])/dx)) #Nx = Ny, nbr of grid cells per dimension
@@ -42,7 +42,7 @@ end
 
 function particleconstruct(;
     # Define the constants for the PDE discretization
-    dt = 0.01, 
+    dt = 0.001, 
     domain = [0 1; 0 1] #only allow square domains
     )
 

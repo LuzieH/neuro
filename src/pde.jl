@@ -5,7 +5,6 @@ using Distances
 using LaTeXStrings
 
 ## todo set seed 
-## todo multiply binding rate in box by amoung of area of box that overlaps with interaction ball (e.g. by monte carlo, comparing number of corners that lie in circle, or numerically)
 
 function second_derivative(Nx, dx)
     M = Tridiagonal(ones(Nx-1), fill(-2., Nx), ones(Nx-1))
@@ -17,7 +16,7 @@ function second_derivative(Nx, dx)
     return M
 end
 
-function ball(radius, center, dx, X, delta= 0.000001,Nsamples=1000)
+function ball(radius, center, dx, X, delta= 0.000001,Nsamples=10000)
     Y = X'
     Nx = size(X,1)
     # check indices of boxes where one corner lies in ball
@@ -40,26 +39,21 @@ function ball(radius, center, dx, X, delta= 0.000001,Nsamples=1000)
             weights[i,j] = 1/Nsamples * size(findall([norm(samples[i,:] - center') for i in 1:Nsamples].<=radius+delta),1)
         end
     end
-
     return allindices, weights
 end
 
-# 2D gaussian that integrates to 1 and centered at center
-gaussian(x, center; sigma=0.3) = 1/(2*pi*sigma^2)* exp(-1/(2*sigma^2)*norm(x-center)^2)
 
 function uniforminit((p,q))
     (; Nx , dV, gridpoints) = p
  
     # distribution of calcium ions
     c0 = ones(Nx, Nx)
-    center = [-0.5 -0.5]
-    #c0 += reshape([gaussian(gridpoints[j,:], center') for j in 1:Nx^2], Nx, Nx)
     c0 = c0/(sum(c0)*dV)
     
     # vesicle occupation proportion, gives proportion of attached ions
     w0 = [0.]
     # vesicle position
-    x0 = [0.8 0.8]
+    x0 = [0.5 0.5]
     return ArrayPartition(c0, w0, x0)
 end
 
@@ -70,7 +64,7 @@ function constructinitial((p,q))
 end
 
 
-function f(du, u,(p,q,allindices,weights),t)
+function f(du, u,(p,q,weights),t)
     yield()
     (; sigma, a, fplus, fminus,gplus,gminus) = q
     (; dx, Nx, M, dV) = p
@@ -80,23 +74,23 @@ function f(du, u,(p,q,allindices,weights),t)
     
     # apply diffusion to density c
     dif = zeros(Nx, Nx)
-    a_AB_BAT!(dif, D, M, c)
+    a_AB_BAT!(dif, D, M, c) # same as dif = D*(M*c + c*M')
+    
 
     # binding and unbinding reactions
     reac = zeros(Nx, Nx)
     #indices = ball(eps, x, X)
     alphafactor = 1/(dV*sum(weights)) # normalization, approx given by 1/area(ball)
     reac = -weights .*c *fplus(w...)*gplus
-    reac += allindices*fminus(w...)*gminus*a*w[1]*alphafactor 
+    reac += weights*fminus(w...)*gminus*a*w[1]*alphafactor 
 
     dc .= dif .+ reac
     dx .= 0 #vesicle doesnt change location
-    dw .= -sum(reac)*dV*(1/a)  
-
+    dw .= -sum(reac)*(dV/a) 
 end
 
 
-# inplace Y = a*(A*B + B+A')
+# inplace Y = a*(A*B + B*A')
 function a_AB_BAT!(Y, a, A, B)
     mul!(Y, A, B)
     mul!(Y, B, A', a, a)
@@ -111,7 +105,7 @@ function PDEsolve(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters())
     (; X, dx,dt) = p
     allindices, weights = ball(eps, x, dx, X) #as long as vesicle doesn't move
     # Solve the ODE
-    prob = ODEProblem(f,u0,(0.0,tmax),(p,q,allindices,weights))
+    prob = ODEProblem(f,u0,(0.0,tmax),(p,q,weights))
     @time sol = DifferentialEquations.solve(prob, alg,save_start=true,saveat = 0:dt:tmax)
     return sol, (p,q)
 end
