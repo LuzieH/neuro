@@ -3,7 +3,8 @@ function parameters(;
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
-    sigma = 1, # noise strength
+    sigma = 1, # noise strength of particles
+    sigmav = 0, # noise strength of vesicle
     a = 1/20 # defines vesicle capacity = a*N
     )
 
@@ -17,7 +18,7 @@ function parameters(;
     
     fminus(x)=1
 
-    q = (; N, gplus,gminus, eps, sigma,a,fplus,fminus)
+    q = (; N, gplus,gminus, eps, sigma,sigmav,a,fplus,fminus)
     return q
 end
 
@@ -33,20 +34,20 @@ function PDEconstruct(;
     # to each box x belongs the area [x-0.5*dx, x+0.5*dx] x [y-0.5*dx, y+0.5*dx]
     Y = X'
     gridpoints = [vec(X) vec(X')]
-    M = second_derivative(Nx, dx)
-    dt = 0.01
+    M = secondderivative(Nx, dx)
+    dt = 0.01 # resolution for saving the numerical solution
     p = (; gridpoints, dx, dV, X,Y, Nx, domain,  M,dt)
 
     return p
 end
 
 function particleconstruct(;
-    # Define the constants for the PDE discretization
-    dt = 0.001, 
+    # Define the constants for the particle-dynamics discretization
+    dt = 0.0005, #0.0002 works for convergence
     domain = [0 1; 0 1] #only allow square domains
     )
 
-    p = (; domain,dt)
+    p = (; domain, dt)
 
     return p
 end

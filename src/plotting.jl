@@ -16,18 +16,15 @@ function PDEplotsingle(c,w,x,(p,q),t; clim=(0,15), title = string("t=", string(r
     return subp
 end
 
-PDEgifsingle(sol, (p,q), args...; kwargs...) = PDEgifsingle([sol], [(p,q)], args...; kwargs...)
-function PDEgifsingle(sols::Vector, Ps::Vector, dt=0.1; save=true, name = "")
+function PDEgifsingle(sol, (p,q), dt=0.1; save=true, name = "")
     T = 0
     anim = Animation()
-    for (sol, P) in zip(sols, Ps)
-        for t in 0:dt:sol.t[end]
-            c,w,x = sol2cwx(sol, t)
-            plt = PDEplotsingle(c,w,x,P,t+T)
-            frame(anim, plt)
-        end
-        T += sol.t[end]
+    for t in 0:dt:sol.t[end]
+        c,w,x = sol2cwx(sol, t)
+        plt = PDEplotsingle(c,w,x,P,t+T)
+        frame(anim, plt)
     end
+
     if save==true
         Plots.gif(anim, string("src/img/pde",name,".gif"), fps = 10)
     end
@@ -63,16 +60,17 @@ function particlegifsingle(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
     end
 end
 
-function particleoccupation(ws,(p,q); save=true, name = "")
+function particleoccupancy(ws,(p,q); save=true, name = "")
     (; dt) = p
-    subp = plot(range(0,size(ws,1)-1)*dt,ws,ylim=(0,1.1),label="occupation")
-
+    subp = plot(range(0,size(ws,1)-1)*dt,ws,ylim=(0,1.1),label="relative occupancy")
+    plt.xlable("t")
+    plt.ylabel("w(t)")
     if save==true
-        savefig(string("src/img/particlemodel_occupation_",name,".png"))
+        savefig(string("src/img/particlemodel_occupancy_",name,".png"))
     end
 end
 
-function PDEoccupation(sol; dt=0.02, save=true, name = "")
+function PDEoccupancy(sol; dt=0.02, save=true, name = "")
     times = []
     ws=[]
     for t in sol.t
@@ -81,10 +79,12 @@ function PDEoccupation(sol; dt=0.02, save=true, name = "")
         ws=push!(ws,w[1])
     end
 
-    subp = plot(times,ws,ylim=(0,1.1),label="occupation")
+    subp = plot(times,ws,ylim=(0,1.1),label="relative occupancy")
+    plt.xlabel("t")
+    plt.ylabel("w(t)")
 
     if save==true
-        savefig(string("src/img/PDE_occupation_",name,".png"))
+        savefig(string("src/img/PDE_occupancy_",name,".png"))
     end
     
 end

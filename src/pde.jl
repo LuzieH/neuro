@@ -4,33 +4,26 @@ using JLD2
 using Distances
 using LaTeXStrings
 
-## todo set seed 
+# TODOs:
+# include several vesicles
+# include vesicle dynamics
 
-function second_derivative(Nx, dx)
+"""computes second derivative matrix for finite-difference discretization"""
+function secondderivative(Nx, dx)
     M = Tridiagonal(ones(Nx-1), fill(-2., Nx), ones(Nx-1))
     # produces Neumann bcs
     M[1,1] = -1.
     M[end,end] = -1.
     M .= (1/dx^2)*M
-
     return M
 end
 
+"""computes overlapp of all grid cells with ball around vesicle"""
 function ball(radius, center, dx, X, delta= 0.000001,Nsamples=10000)
     Y = X'
     Nx = size(X,1)
-    # check indices of boxes where one corner lies in ball
-    indices1 = findall([norm([X[i,j]-0.5*dx Y[i,j]-0.5*dx] - center) for i in 1:Nx, j in 1:Nx].<=radius+delta)
-    indices2 = findall([norm([X[i,j]-0.5*dx Y[i,j]+0.5*dx] - center) for i in 1:Nx, j in 1:Nx].<=radius+delta)
-    indices3 = findall([norm([X[i,j]+0.5*dx Y[i,j]-0.5*dx] - center) for i in 1:Nx, j in 1:Nx].<=radius+delta)
-    indices4 = findall([norm([X[i,j]+0.5*dx Y[i,j]+0.5*dx] - center) for i in 1:Nx, j in 1:Nx].<=radius+delta)
-    # merge indices to get all indices of boxes where at least one corner lies in ball
-    allindices = zeros(Nx,Nx)
-    allindices[indices1] .=1
-    allindices[indices2] .=1
-    allindices[indices3] .=1
-    allindices[indices4] .=1
-    # give proportion of overlapp of ball and box belonging to index
+
+    # give proportion of overlapp of ball and box belonging to certain index
     weights = zeros(Nx,Nx)
     for i in 1:Nx
         for j in 1:Nx
@@ -39,17 +32,17 @@ function ball(radius, center, dx, X, delta= 0.000001,Nsamples=10000)
             weights[i,j] = 1/Nsamples * size(findall([norm(samples[i,:] - center') for i in 1:Nsamples].<=radius+delta),1)
         end
     end
-    return allindices, weights
+    return weights
 end
 
-
+"""produces initial condition for the PDE with uniform distribution of ions,
+and all ions still unbound"""
 function uniforminit((p,q))
-    (; Nx , dV, gridpoints) = p
- 
+    (; Nx, dV) = p
     # distribution of calcium ions
     c0 = ones(Nx, Nx)
     c0 = c0/(sum(c0)*dV)
-    
+
     # vesicle occupation proportion, gives proportion of attached ions
     w0 = [0.]
     # vesicle position
@@ -63,7 +56,7 @@ function constructinitial((p,q))
     return u0
 end
 
-
+"""RHS of coupled PDE-dynamics"""
 function f(du, u,(p,q,weights),t)
     yield()
     (; sigma, a, fplus, fminus,gplus,gminus) = q
@@ -76,40 +69,45 @@ function f(du, u,(p,q,weights),t)
     dif = zeros(Nx, Nx)
     a_AB_BAT!(dif, D, M, c) # same as dif = D*(M*c + c*M')
     
-
     # binding and unbinding reactions
     reac = zeros(Nx, Nx)
-    #indices = ball(eps, x, X)
     alphafactor = 1/(dV*sum(weights)) # normalization, approx given by 1/area(ball)
     reac = -weights .*c *fplus(w...)*gplus
     reac += weights*fminus(w...)*gminus*a*w[1]*alphafactor 
 
+    # total changes on concentration
     dc .= dif .+ reac
-    dx .= 0 #vesicle doesnt change location
+
+    # changes of relative vesicle occupancy
     dw .= -sum(reac)*(dV/a) 
+
+    # vesicle movement
+    dx .= 0 #sigmav*randn(2)*sqrt(dt)
 end
 
 
-# inplace Y = a*(A*B + B*A')
+"""inplace Y = a*(A*B + B*A')"""
 function a_AB_BAT!(Y, a, A, B)
     mul!(Y, A, B)
     mul!(Y, B, A', a, a)
 end
  
-  
+"""solve the PDE"""  
 function PDEsolve(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters())
 
     u0= constructinitial((p,q))
     c,w,x = u0.x
     (; eps) = q
     (; X, dx,dt) = p
-    allindices, weights = ball(eps, x, dx, X) #as long as vesicle doesn't move
-    # Solve the ODE
+    weights = ball(eps, x, dx, X) # as long as vesicle doesn't move
+    # Solve the PDE
     prob = ODEProblem(f,u0,(0.0,tmax),(p,q,weights))
     @time sol = DifferentialEquations.solve(prob, alg,save_start=true,saveat = 0:dt:tmax)
     return sol, (p,q)
 end
 
+"""convert PDE solution to density, relative occupancy and vesicle position 
+for a given time point"""
 function sol2cwx(sol, t)
     c = sol(t).x[1]
     w = sol(t).x[2]
@@ -117,6 +115,7 @@ function sol2cwx(sol, t)
     return c,w,x
 end
 
+"""solve and plot PDE solution"""
 function PDEsolveplot(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters())
     sol, (p,q) = PDEsolve(tmax; alg=alg, p = p, q= q)
     PDEgifsingle(sol,(p,q))
