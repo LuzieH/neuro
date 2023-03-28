@@ -1,5 +1,6 @@
 using DifferentialEquations, LinearAlgebra
 using Random
+using StatsBase
 
 """produces initial conditino for particle dynamics with ion positions uniformly distributed
 and all ions unbound"""
@@ -80,26 +81,21 @@ end
 
 """produce histogram from unbound ion positions"""
 function particlehistogram(y,s,domain, binnumber=20)
-    N=size(y,1)
+
     xrange = range(domain[1,1], domain[1,2],binnumber+1)
     yrange = range(domain[2,1], domain[2,2],binnumber+1)
-    hist = zeros(binnumber,binnumber)
-    for n in 1:N
-        if s[n]==0 # if unbound
-            for i in 1:binnumber 
-                for j in 1:binnumber
-                    if y[n,1]>=xrange[i] && y[n,1]<xrange[i+1] && y[n,2]>=yrange[j] && y[n,2]<yrange[j+1]
-                        hist[i,j]+=1
-                    end
-                end
-            end
-        end
-    end
-    return hist,xrange,yrange
+    
+    # only if s==0
+    indices = findall(s.==0)
+    y = y[indices,:]
+
+    h=fit(Histogram,(y[:,1],y[:,2]),(xrange,yrange))
+
+    return h.weights,xrange,yrange
 end
 
 """compare PDE simulations vs. average (Nsim Monte-Carlo simulations) particle-based simulations with different numbers of ions (given by Ns)"""
-function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20)
+function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
     (;domain) = p1
     ws_averages=Any[]
     hist_averages=Any[]
@@ -108,21 +104,28 @@ function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 
         N=Ns[k]
         q= parameters(N=N)
         ws_average=Any[]
-        hist_average = Any[]
         ws_average = zeros(NT+1)
-        hist_average = zeros(binnumber,binnumber)
+        if histogram==true
+            hist_average = Any[]
+            hist_average = zeros(binnumber,binnumber)
+        end
         for n in 1:Nsim
             ys, ss, xs, ws = particlesolve(NT, p=p2, q=q,chosenseed=n)
             ws_average+=1/Nsim* ws
-            hist,xrange,yrange = particlehistogram(ys[end],ss[end],domain, binnumber) 
-            hist_average += 1/Nsim*hist
+            if histogram==true
+                hist,xrange,yrange = particlehistogram(ys[end],ss[end],domain, binnumber) 
+                hist_average += 1/Nsim*hist
+            end
         end
         ws_averages=push!(ws_averages,ws_average)
-        hist_averages=push!(hist_averages,hist_average)
+        if histogram==true
+            hist_averages=push!(hist_averages,hist_average)
+            # plot average final concentration of particle-dynamics
+            heatmap(hist_average',title=string("N = ",string(round(N))))
+            savefig(string("src/img/densabm_",string(round(N)),".png"))
+        end
+        
 
-        # plot average final concentration of particle-dynamics
-        heatmap(hist_average',title=string("N = ",string(round(N))))
-        savefig(string("src/img/densabm_",string(round(N)),".png"))
     end
 
     (; dt) = p2
@@ -134,10 +137,12 @@ function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 
         times=push!(times,t)
         ws_pde=push!(ws_pde,w[1])
     end
-    # plot final concentration of ions in PDE
-    c,w,x = sol2cwx(sol, NT*dt)
-    heatmap(c',title="PDE")
-    savefig(string("src/img/denspde.png"))
+    if histogram==true
+        # plot final concentration of ions in PDE
+        c,w,x = sol2cwx(sol, NT*dt)
+        heatmap(c',title="PDE")
+        savefig(string("src/img/denspde.png"))
+    end
 
     # plot relative occupancy in time
     subp = plot(times,ws_pde,ylim=(0,1.1),label="PDE",legend=:bottomright)

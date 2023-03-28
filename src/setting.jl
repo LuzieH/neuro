@@ -43,7 +43,7 @@ end
 
 function particleconstruct(;
     # Define the constants for the particle-dynamics discretization
-    dt = 0.0005, #0.0002 works for convergence
+    dt = 0.0005, #0.0002 works perfect for convergence, 0.0005 also works ok/well
     domain = [0 1; 0 1] #only allow square domains
     )
 
