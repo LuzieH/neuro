@@ -62,9 +62,9 @@ end
 
 function particleoccupancy(ws,(p,q); save=true, name = "")
     (; dt) = p
-    subp = plot(range(0,size(ws,1)-1)*dt,ws,ylim=(0,1.1),label="relative occupancy")
-    plt.xlable("t")
-    plt.ylabel("w(t)")
+    subp = plot(range(0,size(ws,1)-1)*dt,ws,ylim=(0,1.1),label="relative occupancy",xlabel ="t",ylabel="w(t)")
+    
+    
     if save==true
         savefig(string("src/img/particlemodel_occupancy_",name,".png"))
     end
@@ -79,9 +79,8 @@ function PDEoccupancy(sol; dt=0.02, save=true, name = "")
         ws=push!(ws,w[1])
     end
 
-    subp = plot(times,ws,ylim=(0,1.1),label="relative occupancy")
-    plt.xlabel("t")
-    plt.ylabel("w(t)")
+    subp = plot(times,ws,ylim=(0,1.1),label="relative occupancy",xlabel ="t",ylabel="w(t)")
+
 
     if save==true
         savefig(string("src/img/PDE_occupancy_",name,".png"))

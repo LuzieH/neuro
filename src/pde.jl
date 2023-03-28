@@ -102,7 +102,7 @@ function PDEsolve(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters())
     weights = ball(eps, x, dx, X) # as long as vesicle doesn't move
     # Solve the PDE
     prob = ODEProblem(f,u0,(0.0,tmax),(p,q,weights))
-    @time sol = DifferentialEquations.solve(prob, alg,save_start=true,saveat = 0:dt:tmax)
+    sol = DifferentialEquations.solve(prob, alg,save_start=true,saveat = 0:dt:tmax)
     return sol, (p,q)
 end
 

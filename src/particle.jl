@@ -95,14 +95,14 @@ function particlehistogram(y,s,domain, binnumber=20)
 end
 
 """compare PDE simulations vs. average (Nsim Monte-Carlo simulations) particle-based simulations with different numbers of ions (given by Ns)"""
-function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
+function comparison(NT=100,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = parameters(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
     (;domain) = p1
     ws_averages=Any[]
     hist_averages=Any[]
 
     for k in eachindex(Ns)
         N=Ns[k]
-        q= parameters(N=N)
+        q = merge(q, (;N=N))
         ws_average=Any[]
         ws_average = zeros(NT+1)
         if histogram==true
@@ -145,9 +145,7 @@ function comparison(NT=100,Nsim=100,Ns=[100,1000,10000,100000]; alg=Tsit5(), p1 
     end
 
     # plot relative occupancy in time
-    subp = plot(times,ws_pde,ylim=(0,1.1),label="PDE",legend=:bottomright)
-    plt.xlabel("t")
-    plt.ylabel("average w(t)")
+    subp = plot(times,ws_pde,ylim=(0,1.1),label="PDE",legend=:bottomright,xlabel ="t",ylabel="average w(t)")
     for k in eachindex(Ns)
         N=Ns[k]
         plot!(range(0,size(ws_averages[k],1)-1)*dt,ws_averages[k],ylim=(0,1.1),label=string("n = ",string(round(N))))

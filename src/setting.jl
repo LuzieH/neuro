@@ -25,7 +25,7 @@ end
 
 function PDEconstruct(;
     # Define the constants for the PDE discretization
-    dx = 0.01, # dx = dy
+    dx = 0.025, # dx = dy
     domain = [0 1; 0 1] #only allow square domains
     )
     Nx = Int(round((domain[1,2]-domain[1,1])/dx)) #Nx = Ny, nbr of grid cells per dimension
@@ -43,7 +43,7 @@ end
 
 function particleconstruct(;
     # Define the constants for the particle-dynamics discretization
-    dt = 0.0005, #0.0002 works perfect for convergence, 0.0005 also works ok/well
+    dt = 0.0005, #0.0002 works perfect for convergence , dt = 0.0005 also works well
     domain = [0 1; 0 1] #only allow square domains
     )
 
