@@ -100,7 +100,7 @@ function studydiscretization(T=0.5,Nsim=100,N=10000,dts = [0.001, 0.0005, 0.0002
     return ws_averages, PDE_wss
 end
 
-function studyparameters(T=0.5,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus=[2.5, 5, 10, 20],gminus=[5, 10, 15, 20], as = [1/50, 1/20, 1/10]; q = parameters(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
+function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus=[2.5, 5, 10, 20],gminus=[5, 10, 15, 20], as = [1/50, 1/20, 1/10]; q = parametersnewf(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
     (; dt) = p1
     dt_PDE = dt
     (; dt) = p2

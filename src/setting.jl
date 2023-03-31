@@ -1,4 +1,4 @@
-function parameters(;
+function parametersold(;
     N = 100, # nbr of calcium ions
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
@@ -23,7 +23,7 @@ function parameters(;
 end
 
 
-function parametersnewf(;
+function parameters(;
     N = 100, # nbr of calcium ions
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
