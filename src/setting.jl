@@ -23,6 +23,33 @@ function parameters(;
 end
 
 
+function parametersnewf(;
+    N = 100, # nbr of calcium ions
+    gplus = 5, # rate of ion binding to vesicle
+    gminus = 10, # rate of ion unbinding from vesicle
+    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
+    sigma = 1, # noise strength of particles
+    sigmav = 0, # noise strength of vesicle
+    a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
+    b=0.5 #unbinding parameter
+    )
+
+    function fplus(x)
+        if x<1
+            return (1-x)
+        else
+            return 0
+        end
+    end
+
+    fminus(x)=b^(a*N*x-1)
+
+    q = (; N, gplus,gminus, eps, sigma,sigmav,a,fplus,fminus)
+    return q
+end
+
+
+
 function PDEconstruct(;
     # Define the constants for the PDE discretization
     dx = 0.025, # dx = dy
