@@ -1,5 +1,6 @@
 function parametersold(;
     N = 100, # nbr of calcium ions
+    M=  1, # number of vesicles
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
@@ -18,20 +19,21 @@ function parametersold(;
     
     fminus(x)=1
 
-    q = (; N, gplus,gminus, eps, sigma,sigmav,a,fplus,fminus)
+    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
     return q
 end
 
 
 function parameters(;
     N = 100, # nbr of calcium ions
+    M=  1, # number of vesicles
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
     sigma = 1, # noise strength of particles
     sigmav = 0, # noise strength of vesicle
     a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    b=0.5 #unbinding parameter
+    b=0.85 #unbinding parameter
     )
 
     function fplus(x)
@@ -41,10 +43,14 @@ function parameters(;
             return 0
         end
     end
+     
+    fminus(x) = b^(a*N*x-1) 
 
-    fminus(x)=b^(a*N*x-1)
+    #function fminus(x)
+    #    return  b^(ceil(a*N*x)-1) 
+    #end
 
-    q = (; N, gplus,gminus, eps, sigma,sigmav,a,fplus,fminus)
+    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
     return q
 end
 

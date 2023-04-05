@@ -100,7 +100,9 @@ function studydiscretization(T=0.5,Nsim=100,N=10000,dts = [0.001, 0.0005, 0.0002
     return ws_averages, PDE_wss
 end
 
-function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus=[2.5, 5, 10, 20],gminus=[5, 10, 15, 20], as = [1/50, 1/20, 1/10]; q = parametersnewf(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
+#studyparameters(2,200,100,[0.05, 0.075, 0.1, 0.1785, 0.25], [1, 2.5, 5, 10, 20], [10, 20, 30, 40,50], [1/50, 1/20, 1/10, 1/5]; q=parameters(N=100))
+
+function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus=[2.5, 5, 10, 20],gminus=[5, 10, 15, 20], as = [1/50, 1/20, 1/10]; q = parameters(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
     (; dt) = p1
     dt_PDE = dt
     (; dt) = p2
@@ -170,12 +172,10 @@ end
 
 
 function compare1box(T,Nions,Nvesicle,Nsim=100;q=parameters(),dt_save=0.01,dt_solve=0.001,save=false)
-    (;gplus,gminus)=q
+    (;gplus,gminus,fplus,fminus)=q
     NT_save = Int(T/dt_save)
     NT_solve = Int(T/dt_solve)
     
-
-
     #particlebased
     Nbound_average =zeros(NT_save+1)
     for sim in 1:Nsim
@@ -186,7 +186,7 @@ function compare1box(T,Nions,Nvesicle,Nsim=100;q=parameters(),dt_save=0.01,dt_so
                 r=rand()
                 if s[i]==0 && r<1-exp(-gplus*dt_solve*fplus(sum(s)/Nvesicle)) && sum(s)<Nvesicle
                     s[i]=1
-                elseif s[i]==1 && r<1-exp(-gminus*dt_solve)
+                elseif s[i]==1 && r<1-exp(-gminus*fminus(sum(s)/Nvesicle)*dt_solve)
                     s[i]=0
                 end
             end
@@ -203,7 +203,7 @@ function compare1box(T,Nions,Nvesicle,Nsim=100;q=parameters(),dt_save=0.01,dt_so
     unbound=Nions
     for k in 2:NT_solve+1
         bound = Nions-unbound
-        unbound = unbound + dt_solve*(gminus*bound - gplus*unbound*fplus(bound/Nvesicle))
+        unbound = unbound + dt_solve*(gminus*bound*fminus(bound/Nvesicle) - gplus*unbound*fplus(bound/Nvesicle))
         if k%Int(dt_save/dt_solve)==1
             Nbound_PDE[c]+=Nions-unbound
             c+=1
