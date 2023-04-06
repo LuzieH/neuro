@@ -1,6 +1,31 @@
+function parameters(;
+    N = 100, # nbr of calcium ions
+    M =  1, # number of vesicles
+    gplus = 5, # rate of ion binding to vesicle
+    gminus = 10, # rate of ion unbinding from vesicle
+    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
+    sigma = 1, # noise strength of particles
+    sigmav = 0, # noise strength of vesicle
+    a = 1/20 # defines vesicle capacity = a*N, needs to be st a*N is an integer
+    )
+
+    function fplus(x)
+        if x<1
+            return (1-x)
+        else
+            return 0
+        end
+    end
+    
+    fminus(x)=1
+
+    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
+    return q
+end
+
 function parametersold(;
     N = 100, # nbr of calcium ions
-    M=  1, # number of vesicles
+    M =  1, # number of vesicles
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
@@ -23,10 +48,9 @@ function parametersold(;
     return q
 end
 
-
-function parameters(;
+function parameterswithfminus(;
     N = 100, # nbr of calcium ions
-    M=  1, # number of vesicles
+    M =  1, # number of vesicles
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
@@ -67,9 +91,9 @@ function PDEconstruct(;
     # to each box x belongs the area [x-0.5*dx, x+0.5*dx] x [y-0.5*dx, y+0.5*dx]
     Y = X'
     gridpoints = [vec(X) vec(X')]
-    M = secondderivative(Nx, dx)
+    Mmatrix = secondderivative(Nx, dx)
     dt = 0.01 # resolution for saving the numerical solution
-    p = (; gridpoints, dx, dV, X,Y, Nx, domain,  M,dt)
+    p = (; gridpoints, dx, dV, X,Y, Nx, domain,  Mmatrix,dt)
 
     return p
 end

@@ -6,50 +6,89 @@ using StatsBase
 and all ions unbound"""
 function particleuniforminit((p,q))
     (; domain) = p
-    (; N ) = q
+    (; N, M ) = q
     # distribution of calcium ions
     y0 = rand(N,2) .*(domain[1,2]-domain[1,1]) .+domain[1,1]
     # binding states of calcium ions
     s0 = zeros(N)
     # vesicle position
-    x0 = [0.5 0.5]
+    x0 = rand(M,2)*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    return y0,s0,x0
+end
+
+function particleinit2((p,q))
+    (; domain) = p
+    (; N, M ) = q
+    if M!=2
+        print("M needs to be 2")
+    end
+    # distribution of calcium ions
+    y0 = rand(N,2) .*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    # binding states of calcium ions
+    s0 = zeros(N)
+    # vesicle position
+    x0 = [0.1 0.1; 0.5 0.5]*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    return y0,s0,x0
+end
+
+function particleinit1((p,q))
+    (; domain) = p
+    (; N, M ) = q
+    if M!=1
+        print("M needs to be 1")
+    end
+    # distribution of calcium ions
+    y0 = rand(N,2) .*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    # binding states of calcium ions
+    s0 = zeros(N)
+    # vesicle position
+    x0 = [0.5 0.5]*(domain[1,2]-domain[1,1]) .+domain[1,1]
     return y0,s0,x0
 end
 
 """solve the particle-dynamics"""
-function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1)
+function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1, initial="init1")
     Random.seed!(chosenseed)
     (; dt, domain) = p
-    (; N, sigma, eps, a, fplus, fminus, gplus, gminus) = q
-    y,s,x = particleuniforminit((p,q))
+    (; N, M, sigma, eps, a, fplus, fminus, gplus, gminus) = q
+    if initial=="init2"
+        y,s,x = particleinit2((p,q))
+    elseif initial=="random"
+        y,s,x = particleuniforminit((p,q))
+    else
+        y,s,x = particleinit1((p,q))
+    end
 
     # time series
-    ys=[copy(y)]
-    ss=[copy(s)]
-    xs=[copy(x)]
-    ws=[copy(sum(s)/(a*N))]
+    ys = [copy(y)]
+    ss = [copy(s)]
+    xs = [copy(x)]
+    v = [size(findall(x->x==i, s),1) for i in 1:M]
+    ws = [copy(v/(a*N))]
 
     for k in 2:NT+1
-        v = sum(s)
+        # v = [size(findall(x->x==i, s),1) for i in 1:M]
         # binding and unbinding reactions
         for i in shuffle(1:N)
-            r=rand()
-            # if binding happens
-            if s[i]==0 && norm(y[i,:]-x')<=eps && r<1-exp(-gplus*fplus(v/(a*N))*dt)
-                s[i]=1
-                v+=1 
-            # unbinding happens
-            elseif s[i]==1 && r<1-exp(-gminus*fminus(v/(a*N))*dt)
-                s[i]=0
-                v-=1 
-                # place ion uniformly in ball of radius eps around x
-                # https://mathworld.wolfram.com/DiskPointPicking.html
-                radius = eps*sqrt(rand())
-                theta = rand()*2*pi
-                y[i,:] = x' + radius* [cos(theta) sin(theta)]'
-            else
-                # update positions
-                y[i,:] = y[i,:] + (1 -s[i])* randn(2)*sqrt(dt)*sigma
+            for m in shuffle(1:M)
+                r=rand()
+                # if binding happens
+                if s[i]==0 && norm(y[i,:]-x[m,:])<=eps && r<1-exp(-gplus*fplus(v[m]/(a*N))*dt)
+                    s[i]=m
+                    v[m]+=1 
+                # unbinding happens
+                elseif s[i]==m && r<1-exp(-gminus*fminus(v[m]/(a*N))*dt)
+                    s[i]=0
+                    v[m]-=1 
+                    # place ion uniformly in ball of radius eps around x
+                    # https://mathworld.wolfram.com/DiskPointPicking.html
+                    radius = eps*sqrt(rand())
+                    theta = rand()*2*pi
+                    y[i,:] = x[m,:] + radius* [cos(theta) sin(theta)]'
+                else
+                    # update positions
+                    y[i,:] = y[i,:] + (s[i]>0)* randn(2)*sqrt(dt)*sigma
+                end
             end
         end
 
@@ -66,7 +105,7 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
         ys = push!(ys,copy(y))
         ss = push!(ss,copy(s))
         xs = push!(xs,copy(x))
-        ws = push!(ws,deepcopy(sum(s)/(a*N)))
+        ws = push!(ws,copy(v/(a*N)))
     end
     return ys, ss, xs, ws
 end 

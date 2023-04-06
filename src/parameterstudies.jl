@@ -5,25 +5,28 @@ using LinearAlgebra
 """compare PDE simulations vs. average (Nsim Monte-Carlo simulations) particle-based simulations with different numbers of ions (given by Ns)"""
 function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = parameters(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
     (;domain) = p1
+    (;M ) = q
     ws_averages=Any[]
     hist_averages=Any[]
 
     for k in eachindex(Ns)
         N=Ns[k]
         q = merge(q, (;N=N))
-        ws_average = zeros(NT+1)
+        ws_average = zeros(NT+1,M)
         if histogram==true
             hist_average = Any[]
             hist_average = zeros(binnumber,binnumber)
         end
         for n in 1:Nsim
             ys, ss, xs, ws = particlesolve(NT, p=p2, q=q,chosenseed=n)
-            ws_average+=1/Nsim* ws
+            ws = reduce(vcat,transpose.(ws))
+            ws_average .+=1/Nsim* ws
             if histogram==true
                 hist,xrange,yrange = particlehistogram(ys[end],ss[end],domain, binnumber) 
                 hist_average += 1/Nsim*hist
             end
         end
+         
         ws_averages=push!(ws_averages,ws_average)
         if histogram==true
             hist_averages=push!(hist_averages,hist_average)
@@ -34,15 +37,16 @@ function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = param
         
 
     end
-
+ 
     (; dt) = p2
     sol, (p1,q) = PDEsolve(NT*dt; alg=alg, p = p1, q= q)
-    times = []
-    ws_pde=Any[]
-    for t in sol.t
+    times = collect(0:dt:sol.t[end])
+    ws_pde=zeros(size(times,1),M)
+    i=1
+    for t in times
         c,w,x = sol2cwx(sol, t)
-        times=push!(times,t)
-        ws_pde=push!(ws_pde,w[1])
+        ws_pde[i,:] = w
+        i+=1
     end
     if histogram==true
         # plot final concentration of ions in PDE
@@ -52,10 +56,13 @@ function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = param
     end
 
     # plot relative occupancy in time
-    subp = plot(times,ws_pde,ylim=(0,1.1),label="PDE",legend=:bottomright,xlabel ="t",ylabel="average w(t)")
-    for k in eachindex(Ns)
-        N=Ns[k]
-        plot!(range(0,size(ws_averages[k],1)-1)*dt,ws_averages[k],ylim=(0,1.1),label=string("n = ",string(round(N))))
+    subp = plot()
+    for m in 1:M
+        plot!(subp,times,ws_pde[:,m],ylim=(0,1.1),label=string("PDE, m =",string(m)),linestyle=:dash,legend=:bottomright,xlabel ="t",ylabel="average w(t)")
+        for k in eachindex(Ns)
+            N=Ns[k]
+            plot!(subp,range(0,size(ws_averages[k][:,m],1)-1)*dt,ws_averages[k][:,m],ylim=(0,1.1),label=string("n = ",string(round(N)),", m = ",string(m))) #range(0,size(ws_averages[k][:,m],1)-1)*dt,
+        end
     end
     savefig(string("src/img/comparison.png"))  
     savefig(string("src/img/comparison.pdf")) 
@@ -64,6 +71,7 @@ end
 
 function studydiscretization(T=0.5,Nsim=100,N=10000,dts = [0.001, 0.0005, 0.00025], dxs = [0.01, 0.025, 0.05, 0.1]; q = parameters(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
     (; dt) = p1
+    (;M ) = q
     dt_PDE = dt
     NT_PDE = Int(T/dt_PDE)
     lw = 0.5
@@ -73,27 +81,34 @@ function studydiscretization(T=0.5,Nsim=100,N=10000,dts = [0.001, 0.0005, 0.0002
     for dt in dts
         p2 = merge(p2, (;dt=dt))
         NT = Int(round(T/dt))
-        ws_average = zeros(NT_PDE+1)  
+        ws_average = zeros(NT_PDE+1,M)  
         for n in 1:Nsim        
             ys, ss, xs, ws = particlesolve(NT, p=p2, q=q, chosenseed=n)
-            ws_average+=1/Nsim*ws[1:Int(dt_PDE/dt):end]
+            ws = reduce(vcat,transpose.(ws))
+            ws_average .+=1/Nsim* ws[1:Int(dt_PDE/dt):end]
         end
         ws_averages=push!(ws_averages,ws_average)
- 
-        plot!(0:dt_PDE:T,ws_average,ylim=(0,1),label=string("particlebased, dt=",string(dt)),legend=:bottomright,xlabel ="t",ylabel="w(t)",linewidth=lw)
+        for m in 1:M
+            plot!(0:dt_PDE:T,ws_average[:,m],ylim=(0,1),label=string("particlebased, dt=",string(dt), ", m = ",string(m)),legend=:bottomright,xlabel ="t",ylabel="w(t)",linewidth=lw)
+        end
     end
 
     PDE_wss =Any[]
     for dx in dxs
         p1 = merge(p1,(;dx=dx))
         sol, (p1,q) = PDEsolve(T;  p = p1, q= q)
-        PDE_ws=Any[]
-        for t in 0:dt_PDE:T
+        times = collect(0:dt_PDE:sol.t[end])
+        PDE_ws=zeros(size(times,1),M)
+        i=1
+        for t in times
             c,w,x = sol2cwx(sol, t)
-            PDE_ws=push!(PDE_ws,w[1])
+            PDE_ws[i,:] = w
+            i+=1
         end
         PDE_wss=push!(PDE_wss,PDE_ws)
-        plot!(0:dt_PDE:T,vec(PDE_ws),ylim=(0,1),label=string("PDE, dx=",string(dx)),linewidth=lw)
+        for m in 1:M
+            plot!(times,PDE_ws[:,m],ylim=(0,1),label=string("PDE, dx=",string(dx), ", m = ", string(m)),linewidth=lw)
+        end
     end
     savefig(string("src/img/studydiscretization.png"))  
     savefig(string("src/img/studydiscretization.pdf"))  
@@ -109,23 +124,30 @@ function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus
     dt_particle = dt
     NT_PDE = Int(T/dt_PDE)
     NT = Int(round(T/dt_particle))
+    (;M) = q
     
     function ws_compare(q,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,labelparticle=string("particlebased, eps=",string(e)),labelpde=string("PDE, eps=",string(e)),colorindex=1)
-        particles_ws = zeros(NT_PDE+1)  
+        particles_ws = zeros(NT_PDE+1,M)  
         #particle based
         for n in 1:Nsim        
             ys, ss, xs, ws = particlesolve(NT, p=p2, q=q, chosenseed=n)
-            particles_ws+=1/Nsim*ws[1:Int(dt_PDE/dt_particle):end]
+            ws = reduce(vcat,transpose.(ws))
+            particles_ws .+=1/Nsim*ws[1:Int(dt_PDE/dt_particle):end,:]
         end
         #pde based
         sol, (p1,q) = PDEsolve(T;  p = p1, q= q)
-        PDE_ws=Any[]
-        for t in 0:dt_PDE:T
+        times = collect(0:dt_PDE:sol.t[end])
+        PDE_ws=zeros(size(times,1),M)
+        j=1
+        for t in times
             c,w,x = sol2cwx(sol, t)
-            PDE_ws=push!(PDE_ws,w[1])
+            PDE_ws[j,:] = w
+            j+=1
         end
-        plot!(0:dt_PDE:T,particles_ws,ylim=(0,1.05),label=labelparticle,legend=:bottomright,xlabel ="t",ylabel="w(t)",color=colorindex)
-        plot!(0:dt_PDE:T,PDE_ws,ylim=(0,1.05),label=labelpde,color=colorindex,linestyle=:dash)
+        for m in 1:M
+            plot!(0:dt_PDE:T,particles_ws[:,m],ylim=(0,1.05),label=labelparticle,legend=:bottomright,xlabel ="t",ylabel="w(t)",color=colorindex)
+            plot!(0:dt_PDE:T,PDE_ws[:,m],ylim=(0,1.05),label=labelpde,color=colorindex,linestyle=:dash)
+        end
     end
 
 
