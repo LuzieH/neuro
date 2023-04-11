@@ -1,13 +1,13 @@
 function parameters(;
     N = 100, # nbr of calcium ions
-    M =  1, # number of vesicles
+    M =  2, # number of vesicles
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
     sigma = 0.25, # noise strength of particles
     sigmav = 0.25, # noise strength of vesicle
     a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    initial = "init1"
+    initial = "init2"
     )
 
     function fplus(x)
