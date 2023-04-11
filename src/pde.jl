@@ -19,7 +19,7 @@ function secondderivative(Nx, dx)
 end
 
 """computes overlapp of all grid cells with ball around vesicle"""
-function ball(radius, center, dx, X, delta= 0.000001,Nsamples=100)
+function ball(radius, center, dx, X, delta= 0.000001,Nsamples=1000)
     Y = X'
     Nx = size(X,1)
     # give proportion of overlapp of ball and box belonging to certain index
@@ -78,7 +78,7 @@ function init1((p,q))
     c0 = c0/(sum(c0)*dV)
 
     # vesicle occupation proportion, gives proportion of attached ions
-    w0 = zeros(M)
+    w0 = zeros(1)
     # vesicle position
     x0 = [0.5 0.5]*(domain[1,2]-domain[1,1]) .+domain[1,1]
     return ArrayPartition(c0, w0, x0)
@@ -89,7 +89,7 @@ function constructinitial((p,q); initial = "init1")
         u0 = init2((p,q))
     elseif initial == "random"
         u0 = uniforminit((p,q))
-    else
+    elseif initial =="init1"
         u0 = init1((p,q))
     end    
     
@@ -116,10 +116,10 @@ function f(du, u,(p,q),t)
     # loop over all vesicles
     for m in 1:M
         reacm = zeros(Nx, Nx)
-        weights = ball(eps, x[m,:], dx_grid, X)  
-        alphafactor = 1/(dV*sum(weights)) # normalization, approx given by 1/area(ball)
-        reacm -= weights .*c *fplus(w[m])*gplus
-        reacm += weights*fminus(w[m])*gminus*a*w[m]*alphafactor
+        wghts = ball(eps, x[m,:], dx_grid, X)  
+        alphafactor = 1/(dV*sum(wghts)) # normalization, approx given by 1/area(ball)
+        reacm -= wghts .*c *fplus(w[m])*gplus
+        reacm += wghts*fminus(w[m])*gminus*a*w[m]*alphafactor
         reacall += reacm
         # changes of relative vesicle occupancy
         dw[m] = -sum(reacm)*(dV/a) 

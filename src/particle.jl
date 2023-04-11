@@ -67,7 +67,6 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
     ws = [copy(v/(a*N))]
 
     for k in 2:NT+1
-        # v = [size(findall(x->x==i, s),1) for i in 1:M]
         # binding and unbinding reactions
         for i in shuffle(1:N)
             for m in shuffle(1:M)
@@ -87,7 +86,7 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
                     y[i,:] = x[m,:] + radius* [cos(theta) sin(theta)]'
                 else
                     # update positions
-                    y[i,:] = y[i,:] + (s[i]>0)* randn(2)*sqrt(dt)*sigma
+                    y[i,:] = y[i,:] + (s[i]<1)* randn(2)*sqrt(dt)*sigma
                 end
             end
         end
