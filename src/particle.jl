@@ -47,10 +47,10 @@ function particleinit1((p,q))
 end
 
 """solve the particle-dynamics"""
-function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1, initial="init1")
+function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1)
     Random.seed!(chosenseed)
     (; dt, domain) = p
-    (; N, M, sigma, eps, a, fplus, fminus, gplus, gminus) = q
+    (; N, M, sigma,sigmav, eps, a, fplus, fminus, gplus, gminus,initial,force,intforce) = q
     if initial=="init2"
         y,s,x = particleinit2((p,q))
     elseif initial=="random"
@@ -91,7 +91,7 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
             end
         end
 
-        # reflective boundary conditions
+        # reflective boundary conditions for Calcium-ions
         indx1 = findall(x->x>domain[1,2],y[:,1])
         indy1 = findall(x->x>domain[2,2],y[:,2])
         indx2 = findall(x->x<domain[1,1],y[:,1])
@@ -100,6 +100,24 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
         y[indy1,2] = - y[indy1,2] .+ 2* domain[2,2] 
         y[indx2,1] = - y[indx2,1] .+ 2* domain[1,1] 
         y[indy2,2] = - y[indy2,2] .+ 2* domain[2,1] 
+
+        # move vesicles
+        for m in 1:M
+            x[m,:] = x[m,:] + dt*force(x[m,:]) +randn(2)*sqrt(dt)*sigmav
+            if M>1
+                x[m,:] += dt* sum([intforce(x[m,:]-x[m2,:]) for m2 in vcat(1:m-1, m+1:M)])
+            end
+        end
+
+        # reflective boundary conditions for vesicle
+        indx1 = findall(x->x>domain[1,2],x[:,1])
+        indy1 = findall(x->x>domain[2,2],x[:,2])
+        indx2 = findall(x->x<domain[1,1],x[:,1])
+        indy2 = findall(x->x<domain[2,1],x[:,2])
+        x[indx1,1] = - x[indx1,1] .+ 2* domain[1,2] 
+        x[indy1,2] = - x[indy1,2] .+ 2* domain[2,2] 
+        x[indx2,1] = - x[indx2,1] .+ 2* domain[1,1] 
+        x[indy2,2] = - x[indy2,2] .+ 2* domain[2,1] 
 
         ys = push!(ys,copy(y))
         ss = push!(ss,copy(s))

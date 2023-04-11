@@ -4,60 +4,10 @@ function parameters(;
     gplus = 5, # rate of ion binding to vesicle
     gminus = 10, # rate of ion unbinding from vesicle
     eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
-    sigma = 1, # noise strength of particles
-    sigmav = 0, # noise strength of vesicle
-    a = 1/20 # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    )
-
-    function fplus(x)
-        if x<1
-            return (1-x)
-        else
-            return 0
-        end
-    end
-    
-    fminus(x)=1
-
-    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
-    return q
-end
-
-function parametersold(;
-    N = 100, # nbr of calcium ions
-    M =  1, # number of vesicles
-    gplus = 5, # rate of ion binding to vesicle
-    gminus = 10, # rate of ion unbinding from vesicle
-    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
-    sigma = 1, # noise strength of particles
-    sigmav = 0, # noise strength of vesicle
-    a = 1/20 # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    )
-
-    function fplus(x)
-        if x<1
-            return 1
-        else
-            return 0
-        end
-    end
-    
-    fminus(x)=1
-
-    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
-    return q
-end
-
-function parameterswithfminus(;
-    N = 100, # nbr of calcium ions
-    M =  1, # number of vesicles
-    gplus = 5, # rate of ion binding to vesicle
-    gminus = 10, # rate of ion unbinding from vesicle
-    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
-    sigma = 1, # noise strength of particles
-    sigmav = 0, # noise strength of vesicle
+    sigma = 0.25, # noise strength of particles
+    sigmav = 0.25, # noise strength of vesicle
     a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    b=0.85 #unbinding parameter
+    initial = "init1"
     )
 
     function fplus(x)
@@ -67,18 +17,22 @@ function parameterswithfminus(;
             return 0
         end
     end
-     
-    fminus(x) = b^(a*N*x-1) 
+    
+    fminus(x)=1
+    # fminus(x) = b^(a*N*x-1) 
 
-    #function fminus(x)
-    #    return  b^(ceil(a*N*x)-1) 
-    #end
+    # downward force for vesicle movement
+    aforce = 0.1
+    force(x) = aforce*[0, -1]
 
-    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus)
+    # interatomic force between vesicles depending on (x_i-x_j) vector
+    aint = 0.1
+    bint = 5
+    intforce(dist) = aint*bint*exp(-bint*norm(dist))*dist/norm(dist)
+
+    q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus,initial, force,intforce)
     return q
 end
-
-
 
 function PDEconstruct(;
     # Define the constants for the PDE discretization

@@ -3,7 +3,7 @@ using LinearAlgebra
 
 
 """compare PDE simulations vs. average (Nsim Monte-Carlo simulations) particle-based simulations with different numbers of ions (given by Ns)"""
-function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = parameters(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
+function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000];  q = parameters(), p1 = PDEconstruct(), p2 = particleconstruct(),binnumber = 20,histogram=false)
     (;domain) = p1
     (;M ) = q
     ws_averages=Any[]
@@ -39,7 +39,7 @@ function comparison(NT=1000,Nsim=100,Ns=[100,1000,10000]; alg=Tsit5(), q = param
     end
  
     (; dt) = p2
-    sol, (p1,q) = PDEsolve(NT*dt; alg=alg, p = p1, q= q)
+    sol, (p1,q) = PDEsolve(NT*dt; p = p1, q= q)
     times = collect(0:dt:sol.t[end])
     ws_pde=zeros(size(times,1),M)
     i=1

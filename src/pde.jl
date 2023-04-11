@@ -19,7 +19,7 @@ function secondderivative(Nx, dx)
 end
 
 """computes overlapp of all grid cells with ball around vesicle"""
-function ball(radius, center, dx, X, delta= 0.000001,Nsamples=1000)
+function ball(radius, center, dx, X, delta= 0.000001,Nsamples=100)
     Y = X'
     Nx = size(X,1)
     # give proportion of overlapp of ball and box belonging to certain index
@@ -99,7 +99,7 @@ end
 """RHS of coupled PDE-dynamics"""
 function f(du, u,(p,q),t)
     yield()
-    (; sigma, M, a, fplus, fminus,gplus,gminus,eps) = q
+    (; sigma,  M, a, fplus, fminus,gplus,gminus,eps,force,intforce) = q
     (; dx, Mmatrix, Nx, dV,X) = p
     dx_grid = dx
     D = sigma^2 * 0.5
@@ -129,7 +129,28 @@ function f(du, u,(p,q),t)
     dc .= dif .+ reacall
 
     # vesicle movement
-    dx .= 0 #sigmav*randn(2)*sqrt(dt)
+    for m in 1:M
+        dx[m,:] = force(x[m])
+        if M>1
+            dx[m,:]+=sum([intforce(x[m,:]-x[m2,:]) for m2 in vcat(1:m-1, m+1:M)])
+
+        end
+    end
+    # HOW TO ENSURE REFLECTING BCs?
+end
+
+function g(du, u,(p,q),t)
+    yield()
+    (; sigmav) = q
+    dc, dw, dx = du.x
+    
+    # no noise on concentration and vesicle occupancy
+    dw .= 0
+    dc .= 0
+
+    # vesicle movement noise
+    dx .= sigmav 
+    
 end
 
 
@@ -138,16 +159,35 @@ function a_AB_BAT!(Y, a, A, B)
     mul!(Y, A, B)
     mul!(Y, B, A', a, a)
 end
- 
-"""solve the PDE"""  
-function PDEsolve(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters(), initial = "init1")
 
+function affect!(integrator)
+    p,q = integrator.p
+    (;domain) = p
+    (;M)=q
+    for m in 1:M
+        if integrator.u.x[3][m,1] < domain[1,1] 
+            integrator.u.x[3][m,1] = 2*domain[1,1] - integrator.u.x[3][m,1]
+        elseif integrator.u.x[3][m,1] > domain[1,2]
+            integrator.u.x[3][m,1] = 2*domain[1,2] - integrator.u.x[3][m,1]
+        elseif integrator.u.x[3][m,2] < domain[2,1]
+            integrator.u.x[3][m,2] = 2*domain[2,1] - integrator.u.x[3][m,2]
+        elseif integrator.u.x[3][m,2] > domain[2,2]
+            integrator.u.x[3][m,2] = 2*domain[2,2] - integrator.u.x[3][m,2]
+        end
+    end
+end
+
+"""solve the PDE"""  
+function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
+    (;initial) = q
     u0= constructinitial((p,q);initial=initial)
     (; dt) = p
-    
-    # Solve the PDE
-    prob = ODEProblem(f,u0,(0.0,tmax),(p,q))
-    sol = DifferentialEquations.solve(prob, alg,save_start=true,saveat = 0:dt:tmax)
+    prob = SDEProblem(f,g, u0,(0.0,tmax),(p,q))
+    # boundary conditions for vesicle movement using callback function
+    condition(u,t,integrator) = true
+    cb = DiscreteCallback(condition,affect!;save_positions=(false,true))
+    # Solve the PDE coupled to vesicle-SDEs
+    sol = DifferentialEquations.solve(prob, callback = cb, save_start=true,saveat = 0:dt:tmax) #alg = alg
     return sol, (p,q)
 end
 
@@ -161,8 +201,8 @@ function sol2cwx(sol, t)
 end
 
 """solve and plot PDE solution"""
-function PDEsolveplot(tmax=1.; alg=Tsit5(), p = PDEconstruct(), q= parameters(),initial="init1")
-    sol, (p,q) = PDEsolve(tmax; alg=alg, p = p, q= q, initial=initial)
+function PDEsolveplot(tmax=1.;  p = PDEconstruct(), q= parameters())
+    sol, (p,q) = PDEsolve(tmax;  p = p, q= q)
     PDEgifsingle(sol,(p,q))
     PDEoccupancy(sol,(p,q))
     return sol, (p,q)

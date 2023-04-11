@@ -51,8 +51,9 @@ function particlegifsingle(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
             y = ys[n]
             x = xs[n]
             w = ws[n]
+            s = ss[n]
 
-            plt = particleplotsingle(y,s, x, w,(p,q),n*dt)
+            plt = particleplotsingle(y, s, x, w,(p,q),n*dt)
             frame(anim, plt)
     end
 
