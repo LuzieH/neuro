@@ -1,7 +1,12 @@
 using Revise
+using neuro
 
-includet("setting.jl")
-includet("pde.jl")
-includet("plotting.jl")
-includet("particle.jl")
-includet("parameterstudies.jl")
+function exportall(mod)
+    for n in names(mod, all = true)
+        if Base.isidentifier(n) && n ∉ (Symbol(mod), :eval)
+            @eval mod export $n
+        end
+    end
+end
+
+exportall(neuro)

@@ -2,8 +2,8 @@ using DifferentialEquations, LinearAlgebra
 using Random
 using StatsBase
 
-"""produces initial conditino for particle dynamics with ion positions uniformly distributed
-and all ions unbound"""
+"""Produces initial condition for particle dynamics with ion positions uniformly distributed
+and all ions unbound, vesicle starting positions are randomly drawn"""
 function particleuniforminit((p,q))
     (; domain) = p
     (; N, M ) = q
@@ -16,6 +16,8 @@ function particleuniforminit((p,q))
     return y0,s0,x0
 end
 
+"""Produces initial condition for particle dynamics with ion positions uniformly distributed
+and all ions unbound, positions of 2 vesicles are specified"""
 function particleinit2((p,q))
     (; domain) = p
     (; N, M ) = q
@@ -31,6 +33,8 @@ function particleinit2((p,q))
     return y0,s0,x0
 end
 
+"""Produces initial condition for particle dynamics with ion positions uniformly distributed
+and all ions unbound, position of 1 vesicle is specified"""
 function particleinit1((p,q))
     (; domain) = p
     (; N, M ) = q
@@ -104,12 +108,12 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
         # move vesicles
         for m in 1:M
             x[m,:] = x[m,:] + dt*force(x[m,:]) +randn(2)*sqrt(dt)*sigmav
-            if M>1
+            if M>1 # interaction force between pairs of vesicles
                 x[m,:] += dt* sum([intforce(x[m,:]-x[m2,:]) for m2 in vcat(1:m-1, m+1:M)])
             end
         end
 
-        # reflective boundary conditions for vesicle
+        # reflective boundary conditions for vesicles
         indx1 = findall(x->x>domain[1,2],x[:,1])
         indy1 = findall(x->x>domain[2,2],x[:,2])
         indx2 = findall(x->x<domain[1,1],x[:,1])
@@ -130,7 +134,7 @@ end
 """solve and plot particle-dynamics"""
 function particlesolveplot(NT=100; chosenseed=1, p = particleconstruct(), q= parameters())
     ys, ss, xs, ws  = particlesolve(NT, p=p, q=q,chosenseed=chosenseed)
-    particlegifsingle(ys, xs, ss, ws, (p,q),dN=5)
+    particlegif(ys, xs, ss, ws, (p,q),dN=5)
     particleoccupancy(ws,(p,q))
     return ys, ss, xs, ws, (p,q)
 end

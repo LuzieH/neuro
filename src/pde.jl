@@ -4,9 +4,6 @@ using JLD2
 using Distances
 using LaTeXStrings
 
-# TODOs:
-# include several vesicles
-# include vesicle dynamics
 
 """computes second derivative matrix for finite-difference discretization"""
 function secondderivative(Nx, dx)
@@ -35,7 +32,7 @@ function ball(radius, center, dx, X, delta= 0.000001,Nsamples=100)
 end
 
 """produces initial condition for the PDE with uniform distribution of ions,
-and all ions still unbound"""
+all ions still unbound, and random initial positions of vesicles"""
 function uniforminit((p,q))
     (; Nx, dV, domain) = p
     (; M ) = q
@@ -50,6 +47,8 @@ function uniforminit((p,q))
     return ArrayPartition(c0, w0, x0)
 end
 
+"""produces initial condition for the PDE with uniform distribution of ions,
+all ions still unbound, and initial condition of 2 vesicles specified """
 function init2((p,q))
     (; Nx, dV, domain) = p
     (; M ) = q
@@ -67,6 +66,8 @@ function init2((p,q))
     return ArrayPartition(c0, w0, x0)
 end
 
+"""produces initial condition for the PDE with uniform distribution of ions,
+all ions still unbound, and initial condition of 1 vesicle specified """
 function init1((p,q))
     (; Nx, dV, domain) = p
     (; M ) = q
@@ -92,11 +93,10 @@ function constructinitial((p,q); initial = "init1")
     elseif initial =="init1"
         u0 = init1((p,q))
     end    
-    
     return u0
 end
 
-"""RHS of coupled PDE-dynamics"""
+"""deterministic RHS of coupled PDE-dynamics"""
 function f(du, u,(p,q),t)
     yield()
     (; sigma,  M, a, fplus, fminus,gplus,gminus,eps,force,intforce) = q
@@ -136,9 +136,9 @@ function f(du, u,(p,q),t)
 
         end
     end
-    # HOW TO ENSURE REFLECTING BCs?
 end
 
+"""stochastic RHS of coupled PDE-dynamics"""
 function g(du, u,(p,q),t)
     yield()
     (; sigmav) = q
@@ -160,6 +160,7 @@ function a_AB_BAT!(Y, a, A, B)
     mul!(Y, B, A', a, a)
 end
 
+"""Ensures reflecting boundary conditions of vesicle"""
 function affect!(integrator)
     p,q = integrator.p
     (;domain) = p
@@ -177,7 +178,7 @@ function affect!(integrator)
     end
 end
 
-"""solve the PDE"""  
+"""Solves the PDE"""  
 function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
     (;initial) = q
     u0= constructinitial((p,q);initial=initial)
@@ -191,7 +192,7 @@ function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
     return sol, (p,q)
 end
 
-"""convert PDE solution to density, relative occupancy and vesicle position 
+"""Convert PDE solution to density, relative occupancy and vesicle position 
 for a given time point"""
 function sol2cwx(sol, t)
     c = sol(t).x[1]
@@ -200,10 +201,10 @@ function sol2cwx(sol, t)
     return c,w,x
 end
 
-"""solve and plot PDE solution"""
+"""Solve and plot PDE solution"""
 function PDEsolveplot(tmax=1.;  p = PDEconstruct(), q= parameters())
     sol, (p,q) = PDEsolve(tmax;  p = p, q= q)
-    PDEgifsingle(sol,(p,q))
+    PDEgif(sol,(p,q))
     PDEoccupancy(sol,(p,q))
     return sol, (p,q)
 end

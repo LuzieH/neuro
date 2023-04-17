@@ -3,7 +3,7 @@ pyplot()
 cmap =reverse(cgrad(:gist_earth)) 
 markercolors_vesicle = :binary
 
-function PDEplotsingle(c,w,x,(p,q),t; clim=(0,3), title = string("t=", string(round(t, digits=2))))
+function PDEplot(c,w,x,(p,q),t; clim=(0,3), title = string("t=", string(round(t, digits=2))))
     (; domain, dx) = p
 
     x_arr = domain[1,1]:dx:domain[1,2]
@@ -16,12 +16,12 @@ function PDEplotsingle(c,w,x,(p,q),t; clim=(0,3), title = string("t=", string(ro
     return subp
 end
 
-function PDEgifsingle(sol, (p,q), dt=0.1; save=true, name = "")
+function PDEgif(sol, (p,q), dt=0.01; save=true, name = "")
     T = 0
     anim = Animation()
     for t in 0:dt:sol.t[end]
         c,w,x = sol2cwx(sol, t)
-        plt = PDEplotsingle(c,w,x,(p,q),t+T)
+        plt = PDEplot(c,w,x,(p,q),t+T)
         frame(anim, plt)
     end
 
@@ -30,7 +30,7 @@ function PDEgifsingle(sol, (p,q), dt=0.1; save=true, name = "")
     end
 end
 
-function particleplotsingle(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,3),title = string("t=", string(round(t, digits=2))))
+function particleplot(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,3),title = string("t=", string(round(t, digits=2))))
     (; domain) = p
     (;N ) = q
 
@@ -44,7 +44,7 @@ function particleplotsingle(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,3),title 
     return subp
 end
 
-function particlegifsingle(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
+function particlegif(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
     (; dt) = p
     anim = Animation()
     for n in 1:dN:size(ws,1)
@@ -53,7 +53,7 @@ function particlegifsingle(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
             w = ws[n]
             s = ss[n]
 
-            plt = particleplotsingle(y, s, x, w,(p,q),n*dt)
+            plt = particleplot(y, s, x, w,(p,q),n*dt)
             frame(anim, plt)
     end
 

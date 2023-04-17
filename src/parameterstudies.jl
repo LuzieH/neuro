@@ -116,6 +116,7 @@ function studydiscretization(T=0.5,Nsim=100,N=10000,dts = [0.001, 0.0005, 0.0002
 end
 
 #studyparameters(2,200,100,[0.05, 0.075, 0.1, 0.1785, 0.25], [1, 2.5, 5, 10, 20], [10, 20, 30, 40,50], [1/50, 1/20, 1/10, 1/5]; q=parameters(N=100))
+#studyparameters(1,200,100,[0.05,  0.1, 0.1785, 0.25], [ 2.5, 5, 10, 20], [10, 25, 35, 50], [1/50, 1/20, 1/10, 1/5]; q=parameters(N=100))
 
 function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus=[2.5, 5, 10, 20],gminus=[5, 10, 15, 20], as = [1/50, 1/20, 1/10]; q = parameters(N=N), p1 = PDEconstruct(), p2 = particleconstruct())
     (; dt) = p1
@@ -155,7 +156,7 @@ function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus
     i=1
     for e in eps
         q1 = merge(q, (;eps=e))
-        ws_compare(q1,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("particles, eps=",string(e)),string("PDE, eps=",string(e)),i)
+        ws_compare(q1,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("PB, eps=",string(e)),string("PDE, eps=",string(e)),i)
         i+=1
     end
     savefig(string("src/img/studyeps.png")) 
@@ -165,7 +166,7 @@ function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus
     i=1
     for gp in gplus
         q2 = merge(q, (;gplus=gp))
-        ws_compare(q2,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("particles, gamma+ =",string(gp)),string("PDE, gamma+ =",string(gp)),i)
+        ws_compare(q2,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("PB, g+=",string(gp)),string("PDE, g+=",string(gp)),i)
         i+=1
     end
     savefig(string("src/img/studygammaplus.png")) 
@@ -175,7 +176,7 @@ function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus
     i=1
     for gm in gminus
         q3 = merge(q, (;gminus=gm))
-        ws_compare(q3,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("particles, gamma- =",string(gm)),string("PDE, gamma- =",string(gm)),i)
+        ws_compare(q3,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("PB, g-=",string(gm)),string("PDE, g-=",string(gm)),i)
         i+=1
     end
     savefig(string("src/img/studygammaminus.png")) 
@@ -185,7 +186,7 @@ function studyparameters(T=1,Nsim=1000,N=100,eps=[0.05, 0.1, 0.1785, 0.25],gplus
     i=1
     for a in as
         q4 = merge(q, (;a=a))
-        ws_compare(q4,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("particles, a =",string(a)),string("PDE, a =",string(a)),i)
+        ws_compare(q4,p1,p2,NT,NT_PDE,Nsim,T,dt_PDE,dt_particle,string("PB, a=",string(a)),string("PDE, a=",string(a)),i)
         i+=1
     end
     savefig(string("src/img/studya.png")) 
@@ -219,7 +220,7 @@ function compare1box(T,Nions,Nvesicle,Nsim=100;q=parameters(),dt_save=0.01,dt_so
         end
     end
 
-    #pde
+    #ode (reaction rate equation)
     Nbound_PDE = zeros(NT_save+1)
     c=2
     unbound=Nions
@@ -264,4 +265,110 @@ function oneboxparam(T=1, Nions = collect(2:1:100), Nvesicles = collect(2:1:50),
     savefig(string("src/img/oneboxaerror_newfplus.png"))
 
     return final_w_particle,final_w_pde 
+end
+
+function testrates(T=1, N=20, a=0.25, gpluss = [0.1,1], gminuss = [0.1,1], alphas = [0.1, 1], bs = [0.25, 0.75], Nsim= 1000)
+    dt_save=0.01
+    Nvesicle = a*N
+    # uncoop
+    p = plot()
+    i = 1
+    for gplus in gpluss
+        for gminus in gminuss
+            function fplus(x) # determines binding rate depending on vesicle occupancy
+                if x<1
+                    return (1-x)
+                else
+                    return 0
+                end
+            end
+            fminus(x)=1
+            q = (; N, gplus, gminus, a, fplus, fminus)
+
+            Nbound_average,Nbound_PDE = compare1box(T,N,Nvesicle,Nsim;q=q,dt_save=dt_save,dt_solve=0.001,save=false)
+
+            plot!(p,0:dt_save:T,Nbound_average/Nvesicle,ylim=(0,1.05),xlim=(0,T+1),label=string("PB, g+ = ",string(gplus), ", g-=",string(gminus)),legend=:bottomright,xlabel ="t",ylabel="w(t)",color=i)
+            plot!(p,0:dt_save:T,Nbound_PDE/Nvesicle,ylim=(0,1.05),xlim=(0,T+1),label=string("ODE, g+ = ",string(gplus), ", g-=",string(gminus)),color=i,linestyle=:dash)
+            i+=1
+        end
+    end
+    savefig(string("src/img/uncoop.png"))
+
+    # coop unbinding according to "Cooperative stochastic binding and unbinding explain synaptic size dynamics and statistics"
+    p = plot()
+    i = 1
+    for gplus in gpluss
+        for gminus in gminuss
+            for alpha in alphas
+                function fplus(x) # determines binding rate depending on vesicle occupancy
+                    if x<1
+                        return (1-x)
+                    else
+                        return 0
+                    end
+                end
+                fminus(x)=1-x+alpha
+                q = (; N, gplus, gminus, a, fplus, fminus)
+
+                Nbound_average,Nbound_PDE = compare1box(T,N,Nvesicle,Nsim;q=q,dt_save=dt_save,dt_solve=0.001,save=false)
+
+                plot!(p,0:dt_save:T,Nbound_average/Nvesicle,xlim=(0,T+1),ylim=(0,1.05),label=string("PB, g+ = ",string(gplus), ", g-=",string(gminus), ", a=",string(alpha)),legend=:bottomright,xlabel ="t",ylabel="w(t)",color=i)
+                plot!(p,0:dt_save:T,Nbound_PDE/Nvesicle,xlim=(0,T+1),ylim=(0,1.05),label=string("ODE, g+ = ",string(gplus), ", g-=",string(gminus), ", a=",string(alpha)),color=i,linestyle=:dash)
+                i+=1
+            end
+        end
+    end
+    savefig(string("src/img/coopunbindinglinear.png"))
+
+    # coop binding  according to "Cooperative stochastic binding and unbinding explain synaptic size dynamics and statistics"
+    p = plot()
+    i = 1
+    for gplus in gpluss
+        for gminus in gminuss
+            for alpha in alphas
+                function fplus(x) # determines binding rate depending on vesicle occupancy
+                    if x<1
+                        return (1-x)*(x + alpha)
+                    else
+                        return 0
+                    end
+                end
+                fminus(x)=1
+                q = (; N, gplus, gminus, a, fplus, fminus)
+
+                Nbound_average,Nbound_PDE = compare1box(T,N,Nvesicle,Nsim;q=q,dt_save=dt_save,dt_solve=0.001,save=false)
+
+                plot!(p,0:dt_save:T,Nbound_average/Nvesicle,xlim=(0,T+1),ylim=(0,1.05),label=string("PB, g+ = ",string(gplus), ", g-=",string(gminus), ", a=",string(alpha)),legend=:bottomright,xlabel ="t",ylabel="w(t)",color=i)
+                plot!(p,0:dt_save:T,Nbound_PDE/Nvesicle,xlim=(0,T+1),ylim=(0,1.05),label=string("ODE, g+ = ",string(gplus), ", g-=",string(gminus), ", a=",string(alpha)),color=i,linestyle=:dash)
+                i+=1
+            end
+        end
+    end
+    savefig(string("src/img/coopbindinglinear.png"))
+
+    # coop unbinding exponenetial
+    p = plot()
+    i = 1
+    for gplus in gpluss
+        for gminus in gminuss
+            for b in bs
+                function fplus(x) # determines binding rate depending on vesicle occupancy
+                    if x<1
+                        return (1-x) 
+                    else
+                        return 0
+                    end
+                end
+                fminus(x)=b^(a*N*x-1)
+                q = (; N, gplus, gminus, a, fplus, fminus)
+
+                Nbound_average,Nbound_PDE = compare1box(T,N,Nvesicle,Nsim;q=q,dt_save=dt_save,dt_solve=0.001,save=false)
+
+                plot!(p,0:dt_save:T,Nbound_average/Nvesicle,xlim=(0,T+0.5),ylim=(0,1.05),label=string("PB, g+ = ",string(gplus), ", g-=",string(gminus), ", b=",string(b)),legend=:bottomright,xlabel ="t",ylabel="w(t)",color=i)
+                plot!(p,0:dt_save:T,Nbound_PDE/Nvesicle,xlim=(0,T+0.5),ylim=(0,1.05),label=string("ODE, g+ = ",string(gplus), ", g-=",string(gminus), ", b=",string(b)),color=i,linestyle=:dash)
+                i+=1
+            end
+        end
+    end
+    savefig(string("src/img/coopunbindingexp.png"))
 end

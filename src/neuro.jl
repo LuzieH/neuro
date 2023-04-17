@@ -1,5 +1,9 @@
 module neuro
 
-greet() = print("Hello World!")
+    include("setting.jl")
+    include("pde.jl")
+    include("plotting.jl")
+    include("particle.jl")
+    include("parameterstudies.jl")
 
-end # module neuro
+end 

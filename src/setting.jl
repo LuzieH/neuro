@@ -1,16 +1,19 @@
 function parameters(;
     N = 100, # nbr of calcium ions
     M =  2, # number of vesicles
-    gplus = 5, # rate of ion binding to vesicle
-    gminus = 10, # rate of ion unbinding from vesicle
-    eps = 0.1785, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
+    gplus = 10, # rate of ion binding to vesicle
+    gminus = 5, # rate of ion unbinding from vesicle
+    eps = 0.2, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
     sigma = 0.25, # noise strength of particles
-    sigmav = 0.25, # noise strength of vesicle
+    sigmav = 0., # noise strength of vesicle
     a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
-    initial = "init2"
+    initial = "init2", # defines the initial conditions
+    aforce = 0.1,
+    aint = 0.05,
+    bint = 5
     )
 
-    function fplus(x)
+    function fplus(x) # determines binding rate depending on vesicle occupancy
         if x<1
             return (1-x)
         else
@@ -18,17 +21,14 @@ function parameters(;
         end
     end
     
-    fminus(x)=1
+    fminus(x)=1 # determines unbinding rate depending on vesicle occupancy
     # fminus(x) = b^(a*N*x-1) 
 
-    # downward force for vesicle movement
-    aforce = 0.1
-    force(x) = aforce*[0, -1]
+    # force for vesicle movement
+    force(x) = aforce*[0, -1] # downward force
 
     # interatomic force between vesicles depending on (x_i-x_j) vector
-    aint = 0.1
-    bint = 5
-    intforce(dist) = aint*bint*exp(-bint*norm(dist))*dist/norm(dist)
+    intforce(dist) = aint*bint*exp(-bint*norm(dist))*dist/norm(dist) # shortrange repulsion
 
     q = (; N, M, gplus, gminus, eps, sigma, sigmav, a, fplus, fminus,initial, force,intforce)
     return q
@@ -54,7 +54,7 @@ end
 
 function particleconstruct(;
     # Define the constants for the particle-dynamics discretization
-    dt = 0.0005, #0.0002 works perfect for convergence , dt = 0.0005 also works well
+    dt = 0.0002, #0.0002 works perfect for convergence , dt = 0.0005 also works well
     domain = [0 1; 0 1] #only allow square domains
     )
 
