@@ -1,9 +1,10 @@
 using Plots
 pyplot()
-cmap =reverse(cgrad(:gist_earth)) 
+cmap = :roma #reverse(cgrad(:gist_earth)) cmap = cgrad(:lightrainbow)
 markercolors_vesicle = :binary
+clim = (0,2)
 
-function PDEplot(c,w,x,(p,q),t; clim=(0,3), title = string("t=", string(round(t, digits=2))))
+function PDEplot(c,w,x,(p,q),t; clim=clim, title = string("t=", string(round(t, digits=2))),ylabel="",legend=false)
     (; domain, dx) = p
 
     x_arr = domain[1,1]:dx:domain[1,2]
@@ -12,11 +13,11 @@ function PDEplot(c,w,x,(p,q),t; clim=(0,3), title = string("t=", string(round(t,
     subp = heatmap(x_arr,y_arr, c, title = title, c=cmap, clim=clim)
     
     # plot vesicle
-    scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,legend=false)  
+    scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,legend=legend,ylabel=ylabel,label="Vesicles",xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))  
     return subp
 end
 
-function PDEgif(sol, (p,q), dt=0.01; save=true, name = "")
+function PDEgif(sol, (p,q); dt=0.01, save=true, name = "")
     T = 0
     anim = Animation()
     for t in 0:dt:sol.t[end]
@@ -30,7 +31,63 @@ function PDEgif(sol, (p,q), dt=0.01; save=true, name = "")
     end
 end
 
-function particleplot(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,3),title = string("t=", string(round(t, digits=2))))
+
+function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
+    (;M) = q
+    times = collect(0:dt:sol.t[end])
+    ws=zeros(size(times,1),M)
+    i=1
+    for t in times
+        c,w,x = sol2cwx(sol, t)
+        ws[i,:] = w
+        i+=1
+    end
+
+    subp = plot()
+    for m in 1:M
+        plot!(subp,times,ws[:,m],ylim=(0,1.1),label=string("W_",string(m)),xlabel ="t")
+    end
+
+    if save==true
+        savefig(string("src/img/PDEoccupancy",name,".png"))
+    end
+    
+end 
+
+
+function PDEsnapshots(sol, (p,q), ts; save = true, name="",clim = clim)
+    nsnapshots = length(ts)
+    plotarray = Any[]  
+    legend = true
+    for i in 1:nsnapshots
+        c,w,x = sol2cwx(sol, ts[i])
+
+        ylabel =string("t = ", string(round(ts[i], digits=2)))
+        if i>1
+            legend=false
+        end
+        subp=  PDEplot(c,w,x,(p,q),ts[i],legend=legend,ylabel=ylabel,title="",clim=clim)
+        
+        push!(plotarray, subp)
+    end    
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
+ 
+
+    for k=1:nsnapshots-1
+        plot!(gridp[k],xformatter=_->"")
+    end
+
+    if save==true
+        savefig(string("src/img/PDEsnapshots",name,".png"))
+        savefig(string("src/img/PDEsnapshots",name,".pdf"))
+    end
+    return gridp
+end
+
+
+###
+
+function particleplot(y,s, x, w,(p,q),t; binnumber = 10, clim=clim,title = string("t=", string(round(t, digits=2))))
     (; domain) = p
     (;N ) = q
 
@@ -44,7 +101,20 @@ function particleplot(y,s, x, w,(p,q),t; binnumber = 10, clim=(0,3),title = stri
     return subp
 end
 
-function particlegif(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
+
+function particleplotscatter(y,s, x, w,(p,q),t; binnumber = 10, clim=clim,title = string("t=", string(round(t, digits=2))),legend=false,ylabel="")
+    (; domain) = p
+    (;N ) = q
+
+    indices = findall(s.==0)
+    subp = scatter(y[indices,1],y[indices,2],markerstrokecolor=:white, markersize=5,title=title,label="Calcium ions",xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))
+    
+    # plot vesicle
+    scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,label="Vesicles",legend=legend,ylabel=ylabel)  
+    return subp
+end
+
+function particlegif(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "",plotfunction = particleplotscatter)
     (; dt) = p
     anim = Animation()
     for n in 1:dN:size(ws,1)
@@ -53,7 +123,7 @@ function particlegif(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "")
             w = ws[n]
             s = ss[n]
 
-            plt = particleplot(y, s, x, w,(p,q),n*dt)
+            plt = plotfunction(y, s, x, w,(p,q),n*dt)
             frame(anim, plt)
     end
 
@@ -68,33 +138,43 @@ function particleoccupancy(ws,(p,q); save=true, name = "")
     ws = reduce(vcat,transpose.(ws))
     subp = plot()
     for m in 1:M
-        plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label="relative occupancy",xlabel ="t",ylabel="w(t)")
+        plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label=string("W_",string(m)),xlabel ="t")
     end
     
     if save==true
-        savefig(string("src/img/particlemodel_occupancy_",name,".png"))
+        savefig(string("src/img/particleoccupancy",name,".png"))
     end
 end
 
-function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
-    (;M) = q
-    times = collect(0:dt:sol.t[end])
-    ws=zeros(size(times,1),M)
-    i=1
-    for t in times
-        c,w,x = sol2cwx(sol, t)
-        ws[i,:] = w
- 
-        i+=1
-    end
 
-    subp = plot()
-    for m in 1:M
-        plot!(subp,times,ws[:,m],ylim=(0,1.1),label="relative occupancy",xlabel ="t",ylabel="w(t)")
+function particlesnapshots(ys, xs, ss, ws, (p,q), ts; save = true, name="",plotfunction = particleplotscatter)
+    (;dt) = p
+    nsnapshots = length(ts)
+    plotarray = Any[]  
+    legend = true
+    for i in 1:nsnapshots
+        t=ts[i]
+        y=ys[t]
+        x=xs[t]
+        s=ss[t]
+        w=ws[t]
+        ylabel =string("t = ", string(round((t-1)*dt, digits=2)))
+        if i>1
+            legend=false
+        end
+        subp= plotfunction(y, s, x, w,(p,q),t; binnumber = 20, clim=clim,title = "",legend=legend,ylabel=ylabel)
+        push!(plotarray, subp)
+    end    
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
+ 
+
+    for k=1:nsnapshots-1
+        plot!(gridp[k],xformatter=_->"")
     end
 
     if save==true
-        savefig(string("src/img/PDE_occupancy_",name,".png"))
+        savefig(string("src/img/particlesnapshots",name,".png"))
+        savefig(string("src/img/particlesnapshots",name,".pdf"))
     end
-    
-end 
+    return gridp
+end

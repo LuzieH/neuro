@@ -1,6 +1,7 @@
 using DifferentialEquations, LinearAlgebra
 using Random
 using StatsBase
+using JLD2
 
 """Produces initial condition for particle dynamics with ion positions uniformly distributed
 and all ions unbound, vesicle starting positions are randomly drawn"""
@@ -29,7 +30,7 @@ function particleinit2((p,q))
     # binding states of calcium ions
     s0 = zeros(N)
     # vesicle position
-    x0 = [0.1 0.1; 0.5 0.5]*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    x0 = [0.1 0.1; 0.4 0.4]*(domain[1,2]-domain[1,1]) .+domain[1,1]
     return y0,s0,x0
 end
 
@@ -83,11 +84,19 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
                 elseif s[i]==m && r<1-exp(-gminus*fminus(v[m]/(a*N))*dt)
                     s[i]=0
                     v[m]-=1 
-                    # place ion uniformly in ball of radius eps around x
+                    # place ion uniformly in ball of radius eps around x that overlaps with domain
                     # https://mathworld.wolfram.com/DiskPointPicking.html
-                    radius = eps*sqrt(rand())
-                    theta = rand()*2*pi
-                    y[i,:] = x[m,:] + radius* [cos(theta) sin(theta)]'
+                    validsample=false
+                    while validsample==false 
+                        radius = eps*sqrt(rand())
+                        theta = rand()*2*pi
+                        sampledpos = x[m,:] + radius* [cos(theta) sin(theta)]' #x[m,:]
+                        if sampledpos[1]<domain[1,2] && sampledpos[1]>domain[1,1] && sampledpos[2]<domain[2,2] && sampledpos[2]>domain[2,1]
+                            # when sampledpos lies in domain
+                            validsample=true
+                        end
+                    end
+                    y[i,:] = sampledpos 
                 else
                     # update positions
                     y[i,:] = y[i,:] + (s[i]<1)* randn(2)*sqrt(dt)*sigma
@@ -132,11 +141,86 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
 end 
 
 """solve and plot particle-dynamics"""
-function particlesolveplot(NT=100; chosenseed=1, p = particleconstruct(), q= parameters())
+function particlesolveplot(T=1; chosenseed=1, p = particleconstruct(), q= parameters())
+    (;dt) = p
+    NT = Int(round((T/dt)))
     ys, ss, xs, ws  = particlesolve(NT, p=p, q=q,chosenseed=chosenseed)
-    particlegif(ys, xs, ss, ws, (p,q),dN=5)
+    particlegif(ys, xs, ss, ws, (p,q),dN=Int(round(NT/100)))
     particleoccupancy(ws,(p,q))
+    particlesnapshots(ys, xs, ss, ws, (p,q), collect(1:Int(round(NT/4)):NT+1))
     return ys, ss, xs, ws, (p,q)
+end
+
+"""solve ensemble of particle-dynamics"""
+function ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= parameters(), binnumber = 40, save=true, name="")
+    (;dt,domain) = p
+    (;N)=q
+    NT = Int(round((T/dt)))
+    ts = collect(1:Int(round(NT/4)):NT+1)
+    nsnapshots = size(ts,1)
+    meanhist = zeros(nsnapshots,binnumber,binnumber)
+    for s in 1:Nsim
+        ys, ss, xs, ws  = particlesolve(NT, p=p, q=q,chosenseed=s)
+        for i in eachindex(ts)
+            t=ts[i]
+            global hist,xrange,yrange = particlehistogram(ys[t],ss[t], domain, binnumber)
+            dV= (xrange[2]-xrange[1])* (yrange[2]-yrange[1])
+            meanhist[i,:,:]+=1/(Nsim*N*dV)*hist
+        end
+        if s==1 
+            global xsaverage = 1/Nsim*xs
+            global wsaverage = 1/Nsim*ws
+        else
+            xsaverage += 1/Nsim*xs
+            wsaverage += 1/Nsim*ws
+        end
+    end
+ 
+    if save==true
+        @save string("src/data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
+    end
+
+    return meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts 
+end
+
+"""plot ensemble of particle-dynamics"""
+function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1), name="", save=true)
+    (;dt, domain) = p 
+    nsnapshots = size(ts,1)
+    particleoccupancy(wsaverage,(p,q),name="ensemble")
+ 
+    # plot snapshots
+    plotarray = Any[]  
+ 
+    for i in eachindex(ts)
+        t=ts[i]
+        x=xsaverage[t]
+        w=wsaverage[t]
+        ylabel =string("t = ", string(round((t-1)*dt, digits=2)))
+        subp = heatmap(xrange, yrange,meanhist[i,:,:]', c=cmap, clim=clim)
+
+        if i>1
+            labelscatter = ""
+            legendscatter = false
+        else
+            legendscatter = true
+            labelscatter = "vesicles"
+        end
+        # plot vesicle
+        scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,ylabel=ylabel,legend=legendscatter,label=labelscatter,xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))
+        push!(plotarray, subp)
+    end    
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
+ 
+
+    for k in 1:nsnapshots-1
+        plot!(gridp[k],xformatter=_->"")
+    end
+
+    if save==true
+        savefig(string("src/img/ensemblesnapshots",name,".png"))
+        savefig(string("src/img/ensemblesnapshots",name,".pdf"))
+    end
 end
 
 """produce histogram from unbound ion positions"""

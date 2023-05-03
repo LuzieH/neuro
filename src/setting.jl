@@ -1,14 +1,14 @@
 function parameters(;
     N = 100, # nbr of calcium ions
     M =  2, # number of vesicles
-    gplus = 10, # rate of ion binding to vesicle
-    gminus = 5, # rate of ion unbinding from vesicle
+    gplus = 4, # rate of ion binding to vesicle
+    gminus = 2, # rate of ion unbinding from vesicle
     eps = 0.2, # radius of interaction ball around vesicle, corresponds to approximately 10% of domain area
     sigma = 0.25, # noise strength of particles
     sigmav = 0., # noise strength of vesicle
     a = 1/20, # defines vesicle capacity = a*N, needs to be st a*N is an integer
     initial = "init2", # defines the initial conditions
-    aforce = 0.1,
+    aforce = 0.25,
     aint = 0.05,
     bint = 5
     )
@@ -36,7 +36,7 @@ end
 
 function PDEconstruct(;
     # Define the constants for the PDE discretization
-    dx = 0.025, # dx = dy
+    dx = 0.05, # dx = 0.05 is much faster! and also ok
     domain = [0 1; 0 1] #only allow square domains
     )
     Nx = Int(round((domain[1,2]-domain[1,1])/dx)) #Nx = Ny, nbr of grid cells per dimension
@@ -46,7 +46,7 @@ function PDEconstruct(;
     Y = X'
     gridpoints = [vec(X) vec(X')]
     Mmatrix = secondderivative(Nx, dx)
-    dt = 0.01 # resolution for saving the numerical solution
+    dt = 0.001 # resolution for saving the numerical solution
     p = (; gridpoints, dx, dV, X,Y, Nx, domain,  Mmatrix,dt)
 
     return p

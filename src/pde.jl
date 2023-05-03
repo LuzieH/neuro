@@ -4,7 +4,7 @@ using JLD2
 using Distances
 using LaTeXStrings
 
-
+ 
 """computes second derivative matrix for finite-difference discretization"""
 function secondderivative(Nx, dx)
     Mmatrix = Tridiagonal(ones(Nx-1), fill(-2., Nx), ones(Nx-1))
@@ -15,8 +15,11 @@ function secondderivative(Nx, dx)
     return Mmatrix
 end
 
-"""computes overlapp of all grid cells with ball around vesicle"""
-function ball(radius, center, dx, X, delta= 0.000001,Nsamples=100)
+
+ 
+"""computes overlapp of all grid cells with ball around vesicle with Monte Carlo. This function is a bottleneck for solving 
+the PDE and becomes very expensive when Nsamples is large"""
+function ballslow(radius, center, dx, X, delta= 0.000001,Nsamples=10)
     Y = X'
     Nx = size(X,1)
     # give proportion of overlapp of ball and box belonging to certain index
@@ -25,6 +28,26 @@ function ball(radius, center, dx, X, delta= 0.000001,Nsamples=100)
         for j in 1:Nx
             #count proportion of uniform random samples lying in ball and particular box
             samples = rand(Nsamples,2)*dx .+ [X[i,j]-0.5*dx Y[i,j]-0.5*dx]
+            weights[i,j] = 1/Nsamples * size(findall([norm(samples[i,:] - center) for i in 1:Nsamples].<=radius+delta),1)
+        end
+    end
+    return weights
+end
+
+"""computes overlapp of all grid cells with ball around vesicle via a regular grid."""
+function ball(radius, center, dx, X, delta= 0.000001,Nsamplesperdim=3)
+    Y = X'
+    Nx = size(X,1)
+    Nsamples = Nsamplesperdim^2
+    # give proportion of overlapp of ball and box belonging to certain index
+    weights = zeros(Nx,Nx)
+    stepsize= 1/Nsamplesperdim
+    for i in 1:Nx
+        for j in 1:Nx
+            #count proportion of uniform random samples lying in ball and particular box
+            grid = [x for x in 0.5*stepsize:stepsize:1-0.5*stepsize, y in 0.5*stepsize:stepsize:1-0.5*stepsize]
+            unitsamples = [vec(grid) vec(grid')]
+            samples = unitsamples*dx .+ [X[i,j]-0.5*dx Y[i,j]-0.5*dx]
             weights[i,j] = 1/Nsamples * size(findall([norm(samples[i,:] - center) for i in 1:Nsamples].<=radius+delta),1)
         end
     end
@@ -62,7 +85,7 @@ function init2((p,q))
     # vesicle occupation proportion, gives proportion of attached ions
     w0 = zeros(2)
     # vesicle position
-    x0 = [0.1 0.1; 0.5 0.5]*(domain[1,2]-domain[1,1]) .+domain[1,1]
+    x0 = [0.1 0.1; 0.4 0.4]*(domain[1,2]-domain[1,1]) .+domain[1,1]
     return ArrayPartition(c0, w0, x0)
 end
 
@@ -133,7 +156,6 @@ function f(du, u,(p,q),t)
         dx[m,:] = force(x[m])
         if M>1
             dx[m,:]+=sum([intforce(x[m,:]-x[m2,:]) for m2 in vcat(1:m-1, m+1:M)])
-
         end
     end
 end
@@ -180,13 +202,19 @@ end
 
 """Solves the PDE"""  
 function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
-    (;initial) = q
+    (;initial,sigmav,M) = q
     u0= constructinitial((p,q);initial=initial)
-    (; dt) = p
-    prob = SDEProblem(f,g, u0,(0.0,tmax),(p,q))
+    (; dt,domain) = p
+    if sigmav>0
+        prob = SDEProblem(f,g, u0,(0.0,tmax),(p,q))
+    else
+        prob = ODEProblem(f,u0,(0.0,tmax),(p,q))
+    end
     # boundary conditions for vesicle movement using callback function
     condition(u,t,integrator) = true
     cb = DiscreteCallback(condition,affect!;save_positions=(false,true))
+    #condition(u,t,integrator) = prod([(u.x[3][m,1]-domain[1,1])*(u.x[3][m,1]-domain[1,2])*(u.x[3][m,2]-domain[2,1])*(u.x[3][m,2]-domain[2,2]) for m in 1:M]) #product of distances to boundary
+    #cb = ContinuousCallback(condition,affect!;save_positions=(false,true))
     # Solve the PDE coupled to vesicle-SDEs
     sol = DifferentialEquations.solve(prob, callback = cb, save_start=true,saveat = 0:dt:tmax) #alg = alg
     return sol, (p,q)
@@ -202,9 +230,10 @@ function sol2cwx(sol, t)
 end
 
 """Solve and plot PDE solution"""
-function PDEsolveplot(tmax=1.;  p = PDEconstruct(), q= parameters())
+function PDEsolveplot(tmax=1.;  p = PDEconstruct(), q= parameters(),clim=(0,2))
     sol, (p,q) = PDEsolve(tmax;  p = p, q= q)
-    PDEgif(sol,(p,q))
+    PDEgif(sol,(p,q),dt = tmax/50)
     PDEoccupancy(sol,(p,q))
+    PDEsnapshots(sol, (p,q), collect(0:(tmax/4):tmax); save = true, name="", clim=clim)
     return sol, (p,q)
 end
