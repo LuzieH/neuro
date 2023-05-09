@@ -216,7 +216,7 @@ function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
     #condition(u,t,integrator) = prod([(u.x[3][m,1]-domain[1,1])*(u.x[3][m,1]-domain[1,2])*(u.x[3][m,2]-domain[2,1])*(u.x[3][m,2]-domain[2,2]) for m in 1:M]) #product of distances to boundary
     #cb = ContinuousCallback(condition,affect!;save_positions=(false,true))
     # Solve the PDE coupled to vesicle-SDEs
-    sol = DifferentialEquations.solve(prob, callback = cb, save_start=true,saveat = 0:dt:tmax) #alg = alg
+    sol = DifferentialEquations.solve(prob, callback = cb, save_start=true,saveat = 0:dt:tmax,dtmax = 0.05) #alg = alg
     return sol, (p,q)
 end
 

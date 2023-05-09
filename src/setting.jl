@@ -36,7 +36,7 @@ end
 
 function PDEconstruct(;
     # Define the constants for the PDE discretization
-    dx = 0.05, # dx = 0.05 is much faster! and also ok
+    dx = 0.025, # dx = 0.05 is much faster! and also ok
     domain = [0 1; 0 1] #only allow square domains
     )
     Nx = Int(round((domain[1,2]-domain[1,1])/dx)) #Nx = Ny, nbr of grid cells per dimension
@@ -46,19 +46,8 @@ function PDEconstruct(;
     Y = X'
     gridpoints = [vec(X) vec(X')]
     Mmatrix = secondderivative(Nx, dx)
-    dt = 0.001 # resolution for saving the numerical solution
+    dt = 0.01 # resolution for saving the numerical solution
     p = (; gridpoints, dx, dV, X,Y, Nx, domain,  Mmatrix,dt)
-
-    return p
-end
-
-function particleconstruct(;
-    # Define the constants for the particle-dynamics discretization
-    dt = 0.0002, #0.0002 works perfect for convergence , dt = 0.0005 also works well
-    domain = [0 1; 0 1] #only allow square domains
-    )
-
-    p = (; domain, dt)
 
     return p
 end

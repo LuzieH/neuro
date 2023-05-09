@@ -90,9 +90,9 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
                     while validsample==false 
                         radius = eps*sqrt(rand())
                         theta = rand()*2*pi
-                        sampledpos = x[m,:] + radius* [cos(theta) sin(theta)]' #x[m,:]
+                        global sampledpos = x[m,:] + radius* [cos(theta) sin(theta)]' 
+                        # check whether sampledpos lies in domain
                         if sampledpos[1]<domain[1,2] && sampledpos[1]>domain[1,1] && sampledpos[2]<domain[2,2] && sampledpos[2]>domain[2,1]
-                            # when sampledpos lies in domain
                             validsample=true
                         end
                     end
@@ -222,6 +222,11 @@ function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);
         savefig(string("src/img/ensemblesnapshots",name,".pdf"))
     end
 end
+
+#function ensemblesolveplot(T=1, Nsim = 100_000;  p = particleconstruct(), q= parameters(), binnumber = 40, save=true, name="")
+#    meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts = ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= parameters(), binnumber = 40, save=true, name="")
+#    clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1)
+#end
 
 """produce histogram from unbound ion positions"""
 function particlehistogram(y,s,domain, binnumber=20)

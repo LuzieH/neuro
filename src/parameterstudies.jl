@@ -494,3 +494,102 @@ function comparerates(T=1, N=100; gpluss = [0.5, 1,2,4], gminus = 2, alphas = [0
     savefig(string("src/img/coopexpunbinding",string(N),".png"))
     savefig(string("src/img/coopexpunbinding",string(N),".pdf"))
 end
+
+
+
+function plotratefunctions(; gpluss = [0.5, 1,2,4], gminus = 2, alphas = [0.1,1], bs = [0.25,0.75])
+    legendloc = :outerright
+
+    pl=plot(xlim=(0,1.05),xlabel ="w",ylabel="r+(w)",legend=legendloc)
+    i=1
+    for gplus in gpluss
+
+        function fplus(x) # determines binding rate depending on vesicle occupancy
+            if x<1
+                return (1-x)
+            else
+                return 0
+            end
+        end
+        fminus(x)=1
+        global w = collect(0:0.01:1)
+        global r = [gplus*fplus(j) for j in w]
+        plot!(pl,w,r,label=string(L"\gamma^+ = ",string(gplus)),color=i)
+        i+=1
+
+    end
+    savefig(string("src/img/r_uncoop.png"))
+    savefig(string("src/img/r_uncoop.pdf"))
+
+    pl=plot(xlim=(0,1.05),xlabel ="w",ylabel="r-(w)",legend=legendloc)
+    i=1
+    for gplus in gpluss
+
+        for alpha in alphas
+            function fplus(x) # determines binding rate depending on vesicle occupancy
+                if x<1
+                    return (1-x)
+                else
+                    return 0
+                end
+            end
+            fminus(x)=1-x+alpha
+            global w = collect(0:0.01:1)
+            global r = [gminus*fminus(j) for j in w]
+            plot!(pl,w,r,label=string(L"\gamma^+ = ",string(gplus),L", \alpha^-=",string(alpha)),color=i)
+
+
+            i+=1
+        end
+
+    end
+    savefig(string("src/img/r_cooplinearunbinding.png"))
+    savefig(string("src/img/r_cooplinearunbinding.pdf"))
+
+    pl=plot(xlim=(0,1.05),xlabel ="w",ylabel="r+(w)",legend=legendloc)
+    i=1
+    for gplus in gpluss
+
+        for alpha in alphas
+            function fplus(x) # determines binding rate depending on vesicle occupancy
+                if x<1
+                    return (1-x)*(x + alpha)
+                else
+                    return 0
+                end
+            end
+            fminus(x)=1
+            global w = collect(0:0.01:1)
+            global r = [gplus*fplus(j) for j in w]
+            plot!(pl,w,r,label=string(L"\gamma^+ = ",string(gplus),L", \alpha^-=",string(alpha)),color=i)
+            i+=1
+        end
+
+    end
+    savefig(string("src/img/r_cooplinearbinding.png"))
+    savefig(string("src/img/r_cooplinearbinding.pdf"))
+    
+    (;a) = q
+    pl=plot(xlim=(0,1.05),xlabel ="w",ylabel="r-(w)",legend=legendloc)
+    i=1
+    for gplus in gpluss
+
+        for b in bs
+            function fplus(x) # determines binding rate depending on vesicle occupancy
+                if x<1
+                    return (1-x) 
+                else
+                    return 0
+                end
+            end
+            fminus(x)=b^(5*x-1)
+            global w = collect(0:0.01:1)
+            global r = [gminus*fminus(j) for j in w]
+            plot!(pl,w,r,label=string(L"\gamma^+ = ",string(gplus),L", \beta=",string(b)),color=i)
+            i+=1
+        end
+
+    end
+    savefig(string("src/img/r_coopexpunbinding.png"))
+    savefig(string("src/img/r_coopexpunbinding.pdf"))
+end
