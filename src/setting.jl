@@ -51,3 +51,14 @@ function PDEconstruct(;
 
     return p
 end
+
+function particleconstruct(;
+    # Define the constants for the particle-dynamics discretization
+    dt = 0.0002, #0.0002 works perfect for convergence , dt = 0.0005 also works well
+    domain = [0 1; 0 1] #only allow square domains
+    )
+
+    p = (; domain, dt)
+
+    return p
+end
