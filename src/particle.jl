@@ -177,7 +177,7 @@ function ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= paramet
     end
  
     if save==true
-        @save string("src/data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
+        @save string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
     end
 
     return meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts 
@@ -218,15 +218,11 @@ function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);
     end
 
     if save==true
-        savefig(string("src/img/ensemblesnapshots",name,".png"))
-        savefig(string("src/img/ensemblesnapshots",name,".pdf"))
+        savefig(string("img/ensemblesnapshots",name,".png"))
+        savefig(string("img/ensemblesnapshots",name,".pdf"))
     end
 end
 
-#function ensemblesolveplot(T=1, Nsim = 100_000;  p = particleconstruct(), q= parameters(), binnumber = 40, save=true, name="")
-#    meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts = ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= parameters(), binnumber = 40, save=true, name="")
-#    clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1)
-#end
 
 """produce histogram from unbound ion positions"""
 function particlehistogram(y,s,domain, binnumber=20)

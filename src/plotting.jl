@@ -1,6 +1,6 @@
 using Plots
 pyplot()
-cmap = :roma #reverse(cgrad(:gist_earth)) cmap = cgrad(:lightrainbow)
+cmap =  :YlGnBu #:roma #  cmap =:PuBuGn   cmap = :GnBu
 markercolors_vesicle = :binary
 clim = (0,2)
 
@@ -27,13 +27,15 @@ function PDEgif(sol, (p,q); dt=0.01, save=true, name = "")
     end
 
     if save==true
-        Plots.gif(anim, string("src/img/pde",name,".gif"), fps = 10)
+        Plots.gif(anim, string("img/pde",name,".gif"), fps = 10)
     end
 end
 
 
 function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
     (;M) = q
+    @assert M>=2
+    labels = [L"W_1", L"W_2"]
     times = collect(0:dt:sol.t[end])
     ws=zeros(size(times,1),M)
     i=1
@@ -45,11 +47,11 @@ function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
 
     subp = plot()
     for m in 1:M
-        plot!(subp,times,ws[:,m],ylim=(0,1.1),label=string("W_",string(m)),xlabel ="t")
+        plot!(subp,times,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
 
     if save==true
-        savefig(string("src/img/PDEoccupancy",name,".png"))
+        savefig(string("img/PDEoccupancy",name,".png"))
     end
     
 end 
@@ -78,8 +80,8 @@ function PDEsnapshots(sol, (p,q), ts; save = true, name="",clim = clim)
     end
 
     if save==true
-        savefig(string("src/img/PDEsnapshots",name,".png"))
-        savefig(string("src/img/PDEsnapshots",name,".pdf"))
+        savefig(string("img/PDEsnapshots",name,".png"))
+        savefig(string("img/PDEsnapshots",name,".pdf"))
     end
     return gridp
 end
@@ -128,21 +130,23 @@ function particlegif(ys, xs, ss, ws, (p,q); dN=10, save=true, name = "",plotfunc
     end
 
     if save==true
-        Plots.gif(anim, string("src/img/particle",name,".gif"), fps = 10)
+        Plots.gif(anim, string("img/particle",name,".gif"), fps = 10)
     end
 end
 
 function particleoccupancy(ws,(p,q); save=true, name = "")
     (; dt) = p
     (; M) = q
+    @assert M>=2
+    labels = [L"W_1", L"W_2"]
     ws = reduce(vcat,transpose.(ws))
     subp = plot()
     for m in 1:M
-        plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label=string("W_",string(m)),xlabel ="t")
+        plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
     
     if save==true
-        savefig(string("src/img/particleoccupancy",name,".png"))
+        savefig(string("img/particleoccupancy",name,".png"))
     end
 end
 
@@ -173,8 +177,8 @@ function particlesnapshots(ys, xs, ss, ws, (p,q), ts; save = true, name="",plotf
     end
 
     if save==true
-        savefig(string("src/img/particlesnapshots",name,".png"))
-        savefig(string("src/img/particlesnapshots",name,".pdf"))
+        savefig(string("img/particlesnapshots",name,".png"))
+        savefig(string("img/particlesnapshots",name,".pdf"))
     end
     return gridp
 end
