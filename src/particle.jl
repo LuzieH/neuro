@@ -2,6 +2,7 @@ using DifferentialEquations, LinearAlgebra
 using Random
 using StatsBase
 using JLD2
+using Plots
 
 """Produces initial condition for particle dynamics with ion positions uniformly distributed
 and all ions unbound, vesicle starting positions are randomly drawn"""
@@ -183,45 +184,6 @@ function ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= paramet
     return meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts 
 end
 
-"""plot ensemble of particle-dynamics"""
-function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1), name="", save=true)
-    (;dt, domain) = p 
-    nsnapshots = size(ts,1)
-    particleoccupancy(wsaverage,(p,q),name="ensemble")
- 
-    # plot snapshots
-    plotarray = Any[]  
- 
-    for i in eachindex(ts)
-        t=ts[i]
-        x=xsaverage[t]
-        w=wsaverage[t]
-        ylabel =string("t = ", string(round((t-1)*dt, digits=2)))
-        subp = heatmap(xrange, yrange,meanhist[i,:,:]', c=cmap, clim=clim)
-
-        if i>1
-            labelscatter = ""
-            legendscatter = false
-        else
-            legendscatter = true
-            labelscatter = "vesicles"
-        end
-        # plot vesicle
-        scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,ylabel=ylabel,legend=legendscatter,label=labelscatter,xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))
-        push!(plotarray, subp)
-    end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
- 
-
-    for k in 1:nsnapshots-1
-        plot!(gridp[k],xformatter=_->"")
-    end
-
-    if save==true
-        savefig(string("img/ensemblesnapshots",name,".png"))
-        savefig(string("img/ensemblesnapshots",name,".pdf"))
-    end
-end
 
 
 """produce histogram from unbound ion positions"""
@@ -238,3 +200,5 @@ function particlehistogram(y,s,domain, binnumber=20)
 
     return h.weights,xrange,yrange
 end
+
+

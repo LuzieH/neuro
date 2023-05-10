@@ -2,6 +2,7 @@ using LinearAlgebra
 using SHA
 using JLD2
 
+
 function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, alphas = [0.1,1], bs = [0.25,0.75], Nsims= [5_000, 500], load=true, save=false)
     n_snapshots = size(Ns,1)
 
@@ -57,7 +58,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
             legendspec = false
             ylabel = ""
         end
-        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)))
+        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)),grid=grid,dpi=dpi)
         i=1
         for gplus in gpluss
 
@@ -77,7 +78,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*70*5,50*5),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all) 
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -101,7 +102,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
             legendspec = false
             ylabel = ""
         end
-        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)))
+        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)),grid=grid,dpi=dpi)
         i=1
         for gplus in gpluss
 
@@ -123,7 +124,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*70*5,50*5),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -148,7 +149,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
             legendspec = false
             ylabel = ""
         end
-        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)))
+        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)),grid=grid,dpi=dpi)
         i=1
         for gplus in gpluss
 
@@ -170,7 +171,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*70*5,50*5),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -195,7 +196,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
             legendspec = false
             ylabel = ""
         end
-        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)))
+        subp=plot(ylim=(0,1.05),xlim=(0,T),xlabel ="t",ylabel=ylabel,legend=legendspec, title = string("n = ",string(N)),grid=grid,dpi=dpi)
         
         i=1
         for gplus in gpluss
@@ -218,7 +219,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*70*5,50*5),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")

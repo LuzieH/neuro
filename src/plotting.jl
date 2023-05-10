@@ -1,19 +1,42 @@
 using Plots
 pyplot()
+grid=false
 cmap =  :YlGnBu #:roma #  cmap =:PuBuGn   cmap = :GnBu
 markercolors_vesicle = :binary
 clim = (0,2)
+bs =0.05
+radius = 0.1
+arcshape(θ1, θ2) = Shape(vcat(Plots.partialcircle(θ1, θ2, 50, radius),
+                      reverse(Plots.partialcircle(θ1, θ2, 50, 0.01*radius))))
+fullcircle = Shape(Plots.partialcircle(0, 2*π, 50, radius))
+plotxsize = 390
+plotxsizeparticles = 330
+plotysize = 200
+plotysizeocc = 250
+dpi=300
 
 function PDEplot(c,w,x,(p,q),t; clim=clim, title = string("t=", string(round(t, digits=2))),ylabel="",legend=false)
     (; domain, dx) = p
+    (;M ) = q
 
     x_arr = domain[1,1]:dx:domain[1,2]
     y_arr = domain[2,1]:dx:domain[2,2]
 
-    subp = heatmap(x_arr,y_arr, c, title = title, c=cmap, clim=clim)
+    subp = heatmap(x_arr,y_arr, c, title = title, c=cmap, clim=clim,grid=grid,dpi=dpi)
     
     # plot vesicle
-    scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,legend=legend,ylabel=ylabel,label="Vesicles",xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))  
+    #scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,legend=legend,ylabel=ylabel,label="Vesicles",xlim = (domain[1,1]-bs,domain[1,2]+bs),ylim = (domain[2,1]-bs,domain[2,2]+bs))  
+    for m in 1:M
+        if m==1
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label="Vesicles",legend=legend)
+        else
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label=false,legend=legend)
+        end
+        if w[m]>0
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (7, arcshape(0,w[m]*2*π)),ylabel=ylabel,c=:black,fillcolor = :black)
+        end
+    end
+
     return subp
 end
 
@@ -35,7 +58,7 @@ end
 function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
     (;M) = q
     @assert M>=2
-    labels = [L"W_1", L"W_2"]
+    labels = [L"w_1", L"w_2"]
     times = collect(0:dt:sol.t[end])
     ws=zeros(size(times,1),M)
     i=1
@@ -45,13 +68,14 @@ function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
         i+=1
     end
 
-    subp = plot()
+    subp = plot(grid=grid,size=(plotxsize,plotysizeocc),dpi=dpi)
     for m in 1:M
         plot!(subp,times,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
 
     if save==true
         savefig(string("img/PDEoccupancy",name,".png"))
+        savefig(string("img/PDEoccupancy",name,".pdf"))
     end
     
 end 
@@ -72,7 +96,7 @@ function PDEsnapshots(sol, (p,q), ts; save = true, name="",clim = clim)
         
         push!(plotarray, subp)
     end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all)
  
 
     for k=1:nsnapshots-1
@@ -96,7 +120,7 @@ function particleplot(y,s, x, w,(p,q),t; binnumber = 10, clim=clim,title = strin
     hist,xrange,yrange = particlehistogram(y,s,domain,binnumber)
     dV= (xrange[2]-xrange[1])* (yrange[2]-yrange[1])
     hist=1/(N*dV)*hist
-    subp = heatmap(xrange, yrange,hist', title = title, c=cmap, clim=clim)
+    subp = heatmap(xrange, yrange,hist', title = title, c=cmap, clim=clim,grid=grid,dpi=dpi)
     
     # plot vesicle
     scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,legend=false)  
@@ -106,13 +130,23 @@ end
 
 function particleplotscatter(y,s, x, w,(p,q),t; binnumber = 10, clim=clim,title = string("t=", string(round(t, digits=2))),legend=false,ylabel="")
     (; domain) = p
-    (;N ) = q
+    (;M ) = q
 
     indices = findall(s.==0)
-    subp = scatter(y[indices,1],y[indices,2],markerstrokecolor=:white, markersize=5,title=title,label="Calcium ions",xlim = (domain[1,1],domain[1,2]),ylim = (domain[2,1],domain[2,2]))
+    subp = scatter(y[indices,1],y[indices,2],markerstrokecolor=:white,linewidth=0, markersize=5,title=title,label="Calcium ions",xlim = (domain[1,1]-bs,domain[1,2]+bs),ylim = (domain[2,1]-bs,domain[2,2]+bs),grid=grid)
     
     # plot vesicle
-    scatter!(subp, x[:,1],x[:,2],markerstrokecolor=:white, markersize=10,c=:black,label="Vesicles",legend=legend,ylabel=ylabel)  
+    for m in 1:M
+        if m==1
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label="Vesicles",legend=legend)
+        else
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label=false,legend=legend)
+        end
+        if w[m]>0
+            plot!(subp,[x[m,1]],[x[m,2]],marker = (7, arcshape(0,w[m]*2*π)),ylabel=ylabel,c=:black,fillcolor = :black)
+        end
+    end
+
     return subp
 end
 
@@ -138,15 +172,16 @@ function particleoccupancy(ws,(p,q); save=true, name = "")
     (; dt) = p
     (; M) = q
     @assert M>=2
-    labels = [L"W_1", L"W_2"]
+    labels = [L"w_1", L"w_2"]
     ws = reduce(vcat,transpose.(ws))
-    subp = plot()
+    subp = plot(grid=grid,size=(plotxsize,plotysizeocc),dpi=dpi)
     for m in 1:M
         plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
     
     if save==true
         savefig(string("img/particleoccupancy",name,".png"))
+        savefig(string("img/particleoccupancy",name,".pdf"))
     end
 end
 
@@ -169,7 +204,7 @@ function particlesnapshots(ys, xs, ss, ws, (p,q), ts; save = true, name="",plotf
         subp= plotfunction(y, s, x, w,(p,q),t; binnumber = 20, clim=clim,title = "",legend=legend,ylabel=ylabel)
         push!(plotarray, subp)
     end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(95*5,nsnapshots*50*5),link=:all)
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsizeparticles,nsnapshots*plotysize),link=:all)
  
 
     for k=1:nsnapshots-1
@@ -181,4 +216,57 @@ function particlesnapshots(ys, xs, ss, ws, (p,q), ts; save = true, name="",plotf
         savefig(string("img/particlesnapshots",name,".pdf"))
     end
     return gridp
+end
+
+
+
+"""plot ensemble of particle-dynamics"""
+function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1), name="", save=true)
+    (;dt, domain) = p 
+    (;M) = q
+    nsnapshots = size(ts,1)
+    particleoccupancy(wsaverage,(p,q),name="ensemble")
+    
+
+    # plot snapshots
+    plotarray = Any[]  
+    
+    for i in eachindex(ts)
+        t=ts[i]
+        x=xsaverage[t]
+        w=wsaverage[t]
+        ylabel =string("t = ", string(round((t-1)*dt, digits=2)))
+        subp = heatmap(xrange, yrange,meanhist[i,:,:]', c=cmap, clim=clim,xlim = (domain[1,1]-bs,domain[1,2]+bs),ylim = (domain[2,1]-bs,domain[2,2]+bs),grid=grid,dpi=dpi)
+
+        if i>1
+            labelscatter = ""
+            legendscatter = false
+        else
+            legendscatter = true
+            labelscatter = "Vesicles"
+        end
+        # plot vesicle
+        for m in 1:M
+            if m==1
+                plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label=labelscatter,legend=legendscatter)
+            else
+                plot!(subp,[x[m,1]],[x[m,2]],marker = (8, fullcircle),linewidth = 1, c=:white,ylabel=ylabel,label=false,legend=legendscatter)
+            end
+            if w[m]>0
+                plot!(subp,[x[m,1]],[x[m,2]],marker = (7, arcshape(0,w[m]*2*π)),ylabel=ylabel,c=:black,fillcolor = :black)
+            end
+        end
+        push!(plotarray, subp)
+    end    
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all)
+ 
+
+    for k in 1:nsnapshots-1
+        plot!(gridp[k],xformatter=_->"")
+    end
+
+    if save==true
+        savefig(string("img/ensemblesnapshots",name,".png"))
+        savefig(string("img/ensemblesnapshots",name,".pdf"))
+    end
 end

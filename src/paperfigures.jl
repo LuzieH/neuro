@@ -3,7 +3,7 @@
 function papersimulations(;T=1, Nsim = 100_000, p1 = particleconstruct(), p2 = PDEconstruct(), q = parameters())
     particlesolveplot(T; chosenseed=1, p = p1, q = q);
     @load string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
-    ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p1,q); clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
+    ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q); clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
     PDEsolveplot(T;  p = p2, q = q,clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
 end
 
