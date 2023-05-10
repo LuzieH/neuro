@@ -96,7 +96,7 @@ function PDEsnapshots(sol, (p,q), ts; save = true, name="",clim = clim)
         
         push!(plotarray, subp)
     end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all)
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all,dpi=dpi)
  
 
     for k=1:nsnapshots-1
@@ -133,7 +133,7 @@ function particleplotscatter(y,s, x, w,(p,q),t; binnumber = 10, clim=clim,title 
     (;M ) = q
 
     indices = findall(s.==0)
-    subp = scatter(y[indices,1],y[indices,2],markerstrokecolor=:white,linewidth=0, markersize=5,title=title,label="Calcium ions",xlim = (domain[1,1]-bs,domain[1,2]+bs),ylim = (domain[2,1]-bs,domain[2,2]+bs),grid=grid)
+    subp = scatter(y[indices,1],y[indices,2],markerstrokewidth=0, markersize=5,title=title,label="Calcium ions",xlim = (domain[1,1]-bs,domain[1,2]+bs),ylim = (domain[2,1]-bs,domain[2,2]+bs),grid=grid)
     
     # plot vesicle
     for m in 1:M
@@ -204,7 +204,7 @@ function particlesnapshots(ys, xs, ss, ws, (p,q), ts; save = true, name="",plotf
         subp= plotfunction(y, s, x, w,(p,q),t; binnumber = 20, clim=clim,title = "",legend=legend,ylabel=ylabel)
         push!(plotarray, subp)
     end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsizeparticles,nsnapshots*plotysize),link=:all)
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsizeparticles,nsnapshots*plotysize),link=:all,dpi=dpi)
  
 
     for k=1:nsnapshots-1
@@ -258,7 +258,7 @@ function ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q);
         end
         push!(plotarray, subp)
     end    
-    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all)
+    gridp=plot(plotarray..., layout=(nsnapshots,1),size=(plotxsize,nsnapshots*plotysize),link=:all,dpi=dpi)
  
 
     for k in 1:nsnapshots-1
