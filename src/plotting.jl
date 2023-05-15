@@ -12,7 +12,10 @@ fullcircle = Shape(Plots.partialcircle(0, 2*π, 50, radius))
 plotxsize = 390
 plotxsizeparticles = 330
 plotysize = 200
+plotxsizeocc = 330
 plotysizeocc = 250
+plotxsizeoccrates = plotxsizeocc*1.1
+plotysizeoccrates = plotysizeocc*1.1
 dpi=300
 
 function PDEplot(c,w,x,(p,q),t; clim=clim, title = string("t=", string(round(t, digits=2))),ylabel="",legend=false)
@@ -68,7 +71,7 @@ function PDEoccupancy(sol,(p,q); dt=0.02, save=true, name = "")
         i+=1
     end
 
-    subp = plot(grid=grid,size=(plotxsize,plotysizeocc),dpi=dpi)
+    subp = plot(grid=grid,size=(plotxsizeocc,plotysizeocc),dpi=dpi)
     for m in 1:M
         plot!(subp,times,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
@@ -174,9 +177,10 @@ function particleoccupancy(ws,(p,q); save=true, name = "")
     @assert M>=2
     labels = [L"w_1", L"w_2"]
     ws = reduce(vcat,transpose.(ws))
-    subp = plot(grid=grid,size=(plotxsize,plotysizeocc),dpi=dpi)
+    subp = plot(grid=grid,size=(plotxsizeocc,plotysizeocc),dpi=dpi)
+    times = range(0,size(ws,1)-1)*dt
     for m in 1:M
-        plot!(subp,range(0,size(ws,1)-1)*dt,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
+        plot!(subp,times,ws[:,m],ylim=(0,1.1),label=labels[m],xlabel ="t")
     end
     
     if save==true

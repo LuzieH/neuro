@@ -3,13 +3,13 @@ using SHA
 using JLD2
 
 
-function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, alphas = [0.1,1], bs = [0.25,0.75], Nsims= [5_000, 500], load=true, save=false)
+function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, alphas = [0.1,1.0], bs = [0.01, 0.1], Nsims= [5_000, 500], load=true, save=false)
     n_snapshots = size(Ns,1)
 
     p1 = PDEconstruct()
     p2 = particleconstruct()
     
-    function compute(q,gplus,gminus,fplus,fminus,alpha, b, T,p1,p2,dt_PDE,NT,Nsim; load=load, save=save,savetitle="")
+    function compute(q,gplus,gminus,fplus,fminus,alpha, b,N, T,p1,p2,dt_PDE,NT,Nsim; load=load, save=save,savetitle="")
         if load==false
             q2  = merge(q, (;gplus=gplus,gminus=gminus,fplus = fplus,fminus=fminus))
             sol, _ = PDEsolve(T; p = p1, q= q2)
@@ -27,11 +27,11 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
                 wsaverage_PB .+=  1/Nsim*reduce(vcat,transpose.(ws))
             end
         elseif load==true
-            @load string("data/ratecomparison_",savetitle,"_",bytes2hex(sha1(string(string(gplus),string(gminus),string(alpha),string(b)))),".jld2") ws_PDE wsaverage_PB
+            @load string("data/ratecomparison_",savetitle,"_",bytes2hex(sha1(string(string(gplus),string(gminus),string(alpha),string(b),string(N)))),".jld2") ws_PDE wsaverage_PB
         end
 
         if save==true
-            @save string("data/ratecomparison_",savetitle,"_",bytes2hex(sha1(string(string(gplus),string(gminus),string(alpha),string(b)))),".jld2") ws_PDE wsaverage_PB
+            @save string("data/ratecomparison_",savetitle,"_",bytes2hex(sha1(string(string(gplus),string(gminus),string(alpha),string(b),string(N)))),".jld2") ws_PDE wsaverage_PB
         end
         
         return ws_PDE,wsaverage_PB
@@ -70,7 +70,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
                 end
             end
             fminus(x)=1
-            global ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,0,0,T,p1,p2,dt_PDE,NT,Nsim,load=load, save=save,savetitle="uncoop")
+            global ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,0,0,N,T,p1,p2,dt_PDE,NT,Nsim,load=load, save=save,savetitle="uncoop")
             plot!(subp,0:dt_PB:T,wsaverage_PB,label=string(L"\gamma^+ = ",string(gplus)),color=i)
             plot!(subp,0:dt_PDE:T,ws_PDE,label="",color=i,linestyle=:dash)
             i+=1
@@ -78,7 +78,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all) 
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsizeoccrates,plotysizeoccrates),link=:all) 
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -115,7 +115,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
                     end
                 end
                 fminus(x)=1-x+alpha
-                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,alpha, 0, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "cooplinearunbinding")
+                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,alpha, 0, N, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "cooplinearunbinding")
                 plot!(subp,0:dt_PB:T,wsaverage_PB,label=string(L"\gamma^+ = ",string(gplus),L", \alpha^-=",string(alpha)),color=i)
                 plot!(subp,0:dt_PDE:T,ws_PDE,label="",color=i,linestyle=:dash)
                 i+=1
@@ -124,7 +124,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsizeoccrates,plotysizeoccrates),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -162,7 +162,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
                     end
                 end
                 fminus(x)=1
-                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,alpha, 0, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "cooplinearbinding")
+                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,alpha, 0, N, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "cooplinearbinding")
                 plot!(subp,0:dt_PB:T,wsaverage_PB,label=string(L"\gamma^+ = ",string(gplus),L", \alpha^+=",string(alpha)),color=i)
                 plot!(subp,0:dt_PDE:T,ws_PDE,label="",color=i,linestyle=:dash)
                 i+=1
@@ -171,7 +171,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsizeoccrates,plotysizeoccrates),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
@@ -209,8 +209,8 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
                         return 0
                     end
                 end
-                fminus(x)=b^(a*N*x-1)
-                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,0,b, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "coopexpunbinding")
+                fminus(x)=b^(x)
+                ws_PDE,wsaverage_PB = compute(q,gplus,gminus,fplus,fminus,0,b,N, T,p1,p2,dt_PDE,NT,Nsim;load=load, save=save, savetitle = "coopexpunbinding")
                 plot!(subp,0:dt_PB:T,wsaverage_PB,label=string(L"\gamma^+ = ",string(gplus),L", \beta=",string(b)),color=i)
                 plot!(subp,0:dt_PDE:T,ws_PDE,label="",color=i,linestyle=:dash)
                 i+=1
@@ -219,7 +219,7 @@ function comparerates(;T=1, Ns=[100, 1000], gpluss = [0.5, 1,2,4], gminus = 2, a
         end
         push!(plotarray, subp)
     end
-    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsize,plotysizeocc),link=:all)
+    gridp=plot(plotarray..., layout=(1,n_snapshots),size=(n_snapshots*plotxsizeoccrates,plotysizeoccrates),link=:all)
  
     for k=2:n_snapshots
         plot!(gridp[k],yformatter=_->"")
