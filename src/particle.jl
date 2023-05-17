@@ -176,7 +176,7 @@ function ensemblesolve(T=1, Nsim = 100_000;  p = particleconstruct(), q= paramet
     end
  
     if save==true
-        @save string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
+        @save string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage  ts
     end
 
     return meanhist, wsaverage, xsaverage, xrange, yrange, (p,q), ts 

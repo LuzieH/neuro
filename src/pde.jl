@@ -205,7 +205,7 @@ function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
     u0= constructinitial((p,q);initial=initial)
     (; dt) = p
     if sigmav>0
-        prob = SDEProblem(f,g, u0,(0.0,tmax),(p,q))
+        prob = SDEProblem(f, g, u0,(0.0,tmax),(p,q))
     else
         prob = ODEProblem(f,u0,(0.0,tmax),(p,q))
     end

@@ -1,9 +1,13 @@
 # functions to make figures for paper
 
-function papersimulations(;T=1, Nsim = 100_000, p1 = particleconstruct(), p2 = PDEconstruct(), q = parameters())
+function papersimulations(;T=1, Nsim = 100_000, p1 = particleconstruct(), p2 = PDEconstruct(), q = parameters(), load = true, save =false)
     particlesolveplot(T; chosenseed=1, p = p1, q = q);
-    @load string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage p q  ts
-    ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p,q); clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
+    if load == true
+        @load string("data/particleensemble.jld2") meanhist xrange yrange wsaverage xsaverage  ts
+    else
+        meanhist, wsaverage, xsaverage, xrange, yrange, _, ts = ensemblesolve(T, Nsim;  p = p1, q= q, save=save)
+    end
+    ensembleplot(meanhist, wsaverage, xsaverage, xrange, yrange, ts, (p1,q); clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
     PDEsolveplot(T;  p = p2, q = q,clim=(minimum(meanhist)-0.1,maximum(meanhist)+0.1));
 end
 
