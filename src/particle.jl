@@ -52,6 +52,18 @@ function particleinit1((p,q))
     return y0,s0,x0
 end
 
+function boundaryconditions(x,domain)
+    indx1 = findall(x->x>domain[1,2],x[:,1])
+    indy1 = findall(x->x>domain[2,2],x[:,2])
+    indx2 = findall(x->x<domain[1,1],x[:,1])
+    indy2 = findall(x->x<domain[2,1],x[:,2])
+    x[indx1,1] = - x[indx1,1] .+ 2* domain[1,2] 
+    x[indy1,2] = - x[indy1,2] .+ 2* domain[2,2] 
+    x[indx2,1] = - x[indx2,1] .+ 2* domain[1,1] 
+    x[indy2,2] = - x[indy2,2] .+ 2* domain[2,1] 
+    return x
+end
+
 """solve the particle-dynamics"""
 function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosenseed=1)
     Random.seed!(chosenseed)
@@ -106,14 +118,7 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
         end
 
         # reflective boundary conditions for Calcium-ions
-        indx1 = findall(x->x>domain[1,2],y[:,1])
-        indy1 = findall(x->x>domain[2,2],y[:,2])
-        indx2 = findall(x->x<domain[1,1],y[:,1])
-        indy2 = findall(x->x<domain[2,1],y[:,2])
-        y[indx1,1] = - y[indx1,1] .+ 2* domain[1,2] 
-        y[indy1,2] = - y[indy1,2] .+ 2* domain[2,2] 
-        y[indx2,1] = - y[indx2,1] .+ 2* domain[1,1] 
-        y[indy2,2] = - y[indy2,2] .+ 2* domain[2,1] 
+        y = boundaryconditions(y,domain)
 
         # move vesicles
         for m in 1:M
@@ -124,19 +129,12 @@ function particlesolve(NT=100;  p = particleconstruct(), q= parameters(),chosens
         end
 
         # reflective boundary conditions for vesicles
-        indx1 = findall(x->x>domain[1,2],x[:,1])
-        indy1 = findall(x->x>domain[2,2],x[:,2])
-        indx2 = findall(x->x<domain[1,1],x[:,1])
-        indy2 = findall(x->x<domain[2,1],x[:,2])
-        x[indx1,1] = - x[indx1,1] .+ 2* domain[1,2] 
-        x[indy1,2] = - x[indy1,2] .+ 2* domain[2,2] 
-        x[indx2,1] = - x[indx2,1] .+ 2* domain[1,1] 
-        x[indy2,2] = - x[indy2,2] .+ 2* domain[2,1] 
+        x = boundaryconditions(x,domain)
 
-        ys = push!(ys,copy(y))
-        ss = push!(ss,copy(s))
-        xs = push!(xs,copy(x))
-        ws = push!(ws,copy(v/(a*N)))
+        push!(ys,copy(y))
+        push!(ss,copy(s))
+        push!(xs,copy(x))
+        push!(ws,copy(v/(a*N)))
     end
     return ys, ss, xs, ws
 end 

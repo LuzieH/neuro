@@ -22,7 +22,6 @@ function parameters(;
     end
     
     fminus(x)=1 # determines unbinding rate depending on vesicle occupancy
-    # fminus(x) = b^(a*N*x-1) 
 
     # force for vesicle movement
     force(x) = aforce*[0, -1] # downward force
@@ -48,7 +47,6 @@ function PDEconstruct(;
     Mmatrix = secondderivative(Nx, dx)
     dt = 0.01 # resolution for saving the numerical solution
     p = (; gridpoints, dx, dV, X,Y, Nx, domain,  Mmatrix,dt)
-
     return p
 end
 
@@ -57,8 +55,6 @@ function particleconstruct(;
     dt = 0.0002, #0.0002 works perfect for convergence , dt = 0.0005 also works well
     domain = [0 1; 0 1] #only allow square domains
     )
-
     p = (; domain, dt)
-
     return p
 end

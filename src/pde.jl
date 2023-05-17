@@ -15,7 +15,6 @@ function secondderivative(Nx, dx)
     return Mmatrix
 end
 
-
  
 """computes overlapp of all grid cells with ball around vesicle with Monte Carlo. This function is a bottleneck for solving 
 the PDE and becomes very expensive when Nsamples is large"""
@@ -202,9 +201,9 @@ end
 
 """Solves the PDE"""  
 function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
-    (;initial,sigmav,M) = q
+    (;initial,sigmav) = q
     u0= constructinitial((p,q);initial=initial)
-    (; dt,domain) = p
+    (; dt) = p
     if sigmav>0
         prob = SDEProblem(f,g, u0,(0.0,tmax),(p,q))
     else
@@ -213,8 +212,6 @@ function PDEsolve(tmax=1.; p = PDEconstruct(), q= parameters())
     # boundary conditions for vesicle movement using callback function
     condition(u,t,integrator) = true
     cb = DiscreteCallback(condition,affect!;save_positions=(false,true))
-    #condition(u,t,integrator) = prod([(u.x[3][m,1]-domain[1,1])*(u.x[3][m,1]-domain[1,2])*(u.x[3][m,2]-domain[2,1])*(u.x[3][m,2]-domain[2,2]) for m in 1:M]) #product of distances to boundary
-    #cb = ContinuousCallback(condition,affect!;save_positions=(false,true))
     # Solve the PDE coupled to vesicle-SDEs
     sol = DifferentialEquations.solve(prob, callback = cb, save_start=true,saveat = 0:dt:tmax,dtmax = 0.05) #alg = alg
     return sol, (p,q)
